@@ -1,0 +1,881 @@
+abbrev	cidr	"cidr_abbrev"	i
+abbrev	inet	"inet_abbrev"	i
+abs	bigint	"int8abs"	i
+abs	double precision	"float8abs"	i
+abs	integer	"int4abs"	i
+abs	numeric	"numeric_abs"	i
+abs	real	"float4abs"	i
+abs	smallint	"int2abs"	i
+acldefault	"char", oid	"acldefault_sql"	i
+aclexplode	acl aclitem[], OUT grantor oid, OUT grantee oid, OUT privilege_type text, OUT is_grantable boolean	"aclexplode"	s
+acos	double precision	"dacos"	i
+acosd	double precision	"dacosd"	i
+acosh	double precision	"dacosh"	i
+age	timestamp without time zone	""	s
+age	timestamp without time zone, timestamp without time zone	"timestamp_age"	i
+age	timestamp with time zone	""	s
+age	timestamp with time zone, timestamp with time zone	"timestamptz_age"	i
+age	xid	"xid_age"	s
+area	box	"box_area"	i
+area	circle	"circle_area"	i
+area	path	"path_area"	i
+array_agg	anyarray	"aggregate_dummy"	i
+array_agg	anynonarray	"aggregate_dummy"	i
+array_append	anycompatiblearray, anycompatible	"array_append"	i
+array_cat	anycompatiblearray, anycompatiblearray	"array_cat"	i
+array_dims	anyarray	"array_dims"	i
+array_fill	anyelement, integer[]	"array_fill"	i
+array_fill	anyelement, integer[], integer[]	"array_fill_with_lower_bounds"	i
+array_length	anyarray, integer	"array_length"	i
+array_lower	anyarray, integer	"array_lower"	i
+array_ndims	anyarray	"array_ndims"	i
+array_position	anycompatiblearray, anycompatible	"array_position"	i
+array_position	anycompatiblearray, anycompatible, integer	"array_position_start"	i
+array_positions	anycompatiblearray, anycompatible	"array_positions"	i
+array_prepend	anycompatible, anycompatiblearray	"array_prepend"	i
+array_remove	anycompatiblearray, anycompatible	"array_remove"	i
+array_replace	anycompatiblearray, anycompatible, anycompatible	"array_replace"	i
+array_sample	anyarray, integer	"array_sample"	v
+array_shuffle	anyarray	"array_shuffle"	v
+array_to_json	anyarray	"array_to_json"	s
+array_to_json	anyarray, boolean	"array_to_json_pretty"	s
+array_to_string	anyarray, text	"array_to_text"	s
+array_to_string	anyarray, text, text	"array_to_text_null"	s
+array_to_tsvector	text[]	"array_to_tsvector"	i
+array_upper	anyarray, integer	"array_upper"	i
+ascii	text	"ascii"	i
+asin	double precision	"dasin"	i
+asind	double precision	"dasind"	i
+asinh	double precision	"dasinh"	i
+atan	double precision	"datan"	i
+atan2	double precision, double precision	"datan2"	i
+atan2d	double precision, double precision	"datan2d"	i
+atand	double precision	"datand"	i
+atanh	double precision	"datanh"	i
+avg	bigint	"aggregate_dummy"	i
+avg	double precision	"aggregate_dummy"	i
+avg	integer	"aggregate_dummy"	i
+avg	interval	"aggregate_dummy"	i
+avg	numeric	"aggregate_dummy"	i
+avg	real	"aggregate_dummy"	i
+avg	smallint	"aggregate_dummy"	i
+bit_and	bigint	"aggregate_dummy"	i
+bit_and	bit	"aggregate_dummy"	i
+bit_and	integer	"aggregate_dummy"	i
+bit_and	smallint	"aggregate_dummy"	i
+bit_length	bit	""	i
+bit_length	bytea	""	i
+bit_length	text	""	i
+bit_or	bigint	"aggregate_dummy"	i
+bit_or	bit	"aggregate_dummy"	i
+bit_or	integer	"aggregate_dummy"	i
+bit_or	smallint	"aggregate_dummy"	i
+bool	integer	"int4_bool"	i
+bool	jsonb	"jsonb_bool"	i
+bool_and	boolean	"aggregate_dummy"	i
+bool_or	boolean	"aggregate_dummy"	i
+broadcast	inet	"network_broadcast"	i
+btrim	bytea, bytea	"byteatrim"	i
+btrim	text	"btrim1"	i
+btrim	text, text	"btrim"	i
+cardinality	anyarray	"array_cardinality"	i
+cbrt	double precision	"dcbrt"	i
+ceil	double precision	"dceil"	i
+ceil	numeric	"numeric_ceil"	i
+ceiling	double precision	"dceil"	i
+ceiling	numeric	"numeric_ceil"	i
+center	box	"box_center"	i
+center	circle	"circle_center"	i
+char_length	character	"bpcharlen"	i
+char_length	text	"textlen"	i
+character_length	character	"bpcharlen"	i
+character_length	text	"textlen"	i
+chr	integer	"chr"	i
+clock_timestamp		"clock_timestamp"	v
+concat	VARIADIC "any"	"text_concat"	s
+concat_ws	text, VARIADIC "any"	"text_concat_ws"	s
+convert	bytea, name, name	"pg_convert"	s
+convert_from	bytea, name	"pg_convert_from"	s
+convert_to	text, name	"pg_convert_to"	s
+cos	double precision	"dcos"	i
+cosd	double precision	"dcosd"	i
+cosh	double precision	"dcosh"	i
+cot	double precision	"dcot"	i
+cotd	double precision	"dcotd"	i
+count		"aggregate_dummy"	i
+count	"any"	"aggregate_dummy"	i
+cume_dist		"window_cume_dist"	i
+cume_dist	VARIADIC "any" ORDER BY VARIADIC "any"	"aggregate_dummy"	i
+current_database		"current_database"	s
+current_query		"current_query"	v
+current_schema		"current_schema"	s
+current_schemas	boolean	"current_schemas"	s
+current_setting	text	"show_config_by_name"	s
+current_setting	text, boolean	"show_config_by_name_missing_ok"	s
+current_user		"current_user"	s
+currval	regclass	"currval_oid"	v
+date	timestamp without time zone	"timestamp_date"	i
+date	timestamp with time zone	"timestamptz_date"	s
+date_part	text, date	""	i
+date_part	text, interval	"interval_part"	i
+date_part	text, timestamp without time zone	"timestamp_part"	i
+date_part	text, timestamp with time zone	"timestamptz_part"	s
+date_part	text, time without time zone	"time_part"	i
+date_part	text, time with time zone	"timetz_part"	i
+date_trunc	text, interval	"interval_trunc"	i
+date_trunc	text, timestamp without time zone	"timestamp_trunc"	i
+date_trunc	text, timestamp with time zone	"timestamptz_trunc"	s
+date_trunc	text, timestamp with time zone, text	"timestamptz_trunc_zone"	i
+decode	text, text	"binary_decode"	i
+degrees	double precision	"degrees"	i
+dense_rank		"window_dense_rank"	i
+dense_rank	VARIADIC "any" ORDER BY VARIADIC "any"	"aggregate_dummy"	i
+diameter	circle	"circle_diameter"	i
+div	numeric, numeric	"numeric_div_trunc"	i
+encode	bytea, text	"binary_encode"	i
+enum_first	anyenum	"enum_first"	s
+enum_last	anyenum	"enum_last"	s
+enum_range	anyenum	"enum_range_all"	s
+enum_range	anyenum, anyenum	"enum_range_bounds"	s
+erf	double precision	"derf"	i
+erfc	double precision	"derfc"	i
+every	boolean	"aggregate_dummy"	i
+exp	double precision	"dexp"	i
+exp	numeric	"numeric_exp"	i
+extract	text, date	"extract_date"	i
+extract	text, interval	"extract_interval"	i
+extract	text, timestamp without time zone	"extract_timestamp"	i
+extract	text, timestamp with time zone	"extract_timestamptz"	s
+extract	text, time without time zone	"extract_time"	i
+extract	text, time with time zone	"extract_timetz"	i
+factorial	bigint	"numeric_fac"	i
+family	inet	"network_family"	i
+first_value	anyelement	"window_first_value"	i
+float4	bigint	"i8tof"	i
+float4	double precision	"dtof"	i
+float4	integer	"i4tof"	i
+float4	jsonb	"jsonb_float4"	i
+float4	numeric	"numeric_float4"	i
+float4	smallint	"i2tof"	i
+float8	bigint	"i8tod"	i
+float8	integer	"i4tod"	i
+float8	jsonb	"jsonb_float8"	i
+float8	numeric	"numeric_float8"	i
+float8	real	"ftod"	i
+float8	smallint	"i2tod"	i
+floor	double precision	"dfloor"	i
+floor	numeric	"numeric_floor"	i
+format	text	"text_format_nv"	s
+format	text, VARIADIC "any"	"text_format"	s
+format_type	oid, integer	"format_type"	s
+gcd	bigint, bigint	"int8gcd"	i
+gcd	integer, integer	"int4gcd"	i
+gcd	numeric, numeric	"numeric_gcd"	i
+gen_random_uuid		"gen_random_uuid"	v
+get_current_ts_config		"get_current_ts_config"	s
+has_any_column_privilege	name, oid, text	"has_any_column_privilege_name_id"	s
+has_any_column_privilege	name, text, text	"has_any_column_privilege_name_name"	s
+has_any_column_privilege	oid, oid, text	"has_any_column_privilege_id_id"	s
+has_any_column_privilege	oid, text	"has_any_column_privilege_id"	s
+has_any_column_privilege	oid, text, text	"has_any_column_privilege_id_name"	s
+has_any_column_privilege	text, text	"has_any_column_privilege_name"	s
+has_column_privilege	name, oid, smallint, text	"has_column_privilege_name_id_attnum"	s
+has_column_privilege	name, oid, text, text	"has_column_privilege_name_id_name"	s
+has_column_privilege	name, text, smallint, text	"has_column_privilege_name_name_attnum"	s
+has_column_privilege	name, text, text, text	"has_column_privilege_name_name_name"	s
+has_column_privilege	oid, oid, smallint, text	"has_column_privilege_id_id_attnum"	s
+has_column_privilege	oid, oid, text, text	"has_column_privilege_id_id_name"	s
+has_column_privilege	oid, smallint, text	"has_column_privilege_id_attnum"	s
+has_column_privilege	oid, text, smallint, text	"has_column_privilege_id_name_attnum"	s
+has_column_privilege	oid, text, text	"has_column_privilege_id_name"	s
+has_column_privilege	oid, text, text, text	"has_column_privilege_id_name_name"	s
+has_column_privilege	text, smallint, text	"has_column_privilege_name_attnum"	s
+has_column_privilege	text, text, text	"has_column_privilege_name_name"	s
+has_database_privilege	name, oid, text	"has_database_privilege_name_id"	s
+has_database_privilege	name, text, text	"has_database_privilege_name_name"	s
+has_database_privilege	oid, oid, text	"has_database_privilege_id_id"	s
+has_database_privilege	oid, text	"has_database_privilege_id"	s
+has_database_privilege	oid, text, text	"has_database_privilege_id_name"	s
+has_database_privilege	text, text	"has_database_privilege_name"	s
+has_foreign_data_wrapper_privilege	name, oid, text	"has_foreign_data_wrapper_privilege_name_id"	s
+has_foreign_data_wrapper_privilege	name, text, text	"has_foreign_data_wrapper_privilege_name_name"	s
+has_foreign_data_wrapper_privilege	oid, oid, text	"has_foreign_data_wrapper_privilege_id_id"	s
+has_foreign_data_wrapper_privilege	oid, text	"has_foreign_data_wrapper_privilege_id"	s
+has_foreign_data_wrapper_privilege	oid, text, text	"has_foreign_data_wrapper_privilege_id_name"	s
+has_foreign_data_wrapper_privilege	text, text	"has_foreign_data_wrapper_privilege_name"	s
+has_function_privilege	name, oid, text	"has_function_privilege_name_id"	s
+has_function_privilege	name, text, text	"has_function_privilege_name_name"	s
+has_function_privilege	oid, oid, text	"has_function_privilege_id_id"	s
+has_function_privilege	oid, text	"has_function_privilege_id"	s
+has_function_privilege	oid, text, text	"has_function_privilege_id_name"	s
+has_function_privilege	text, text	"has_function_privilege_name"	s
+has_language_privilege	name, oid, text	"has_language_privilege_name_id"	s
+has_language_privilege	name, text, text	"has_language_privilege_name_name"	s
+has_language_privilege	oid, oid, text	"has_language_privilege_id_id"	s
+has_language_privilege	oid, text	"has_language_privilege_id"	s
+has_language_privilege	oid, text, text	"has_language_privilege_id_name"	s
+has_language_privilege	text, text	"has_language_privilege_name"	s
+has_parameter_privilege	name, text, text	"has_parameter_privilege_name_name"	s
+has_parameter_privilege	oid, text, text	"has_parameter_privilege_id_name"	s
+has_parameter_privilege	text, text	"has_parameter_privilege_name"	s
+has_schema_privilege	name, oid, text	"has_schema_privilege_name_id"	s
+has_schema_privilege	name, text, text	"has_schema_privilege_name_name"	s
+has_schema_privilege	oid, oid, text	"has_schema_privilege_id_id"	s
+has_schema_privilege	oid, text	"has_schema_privilege_id"	s
+has_schema_privilege	oid, text, text	"has_schema_privilege_id_name"	s
+has_schema_privilege	text, text	"has_schema_privilege_name"	s
+has_sequence_privilege	name, oid, text	"has_sequence_privilege_name_id"	s
+has_sequence_privilege	name, text, text	"has_sequence_privilege_name_name"	s
+has_sequence_privilege	oid, oid, text	"has_sequence_privilege_id_id"	s
+has_sequence_privilege	oid, text	"has_sequence_privilege_id"	s
+has_sequence_privilege	oid, text, text	"has_sequence_privilege_id_name"	s
+has_sequence_privilege	text, text	"has_sequence_privilege_name"	s
+has_server_privilege	name, oid, text	"has_server_privilege_name_id"	s
+has_server_privilege	name, text, text	"has_server_privilege_name_name"	s
+has_server_privilege	oid, oid, text	"has_server_privilege_id_id"	s
+has_server_privilege	oid, text	"has_server_privilege_id"	s
+has_server_privilege	oid, text, text	"has_server_privilege_id_name"	s
+has_server_privilege	text, text	"has_server_privilege_name"	s
+has_table_privilege	name, oid, text	"has_table_privilege_name_id"	s
+has_table_privilege	name, text, text	"has_table_privilege_name_name"	s
+has_table_privilege	oid, oid, text	"has_table_privilege_id_id"	s
+has_table_privilege	oid, text	"has_table_privilege_id"	s
+has_table_privilege	oid, text, text	"has_table_privilege_id_name"	s
+has_table_privilege	text, text	"has_table_privilege_name"	s
+has_tablespace_privilege	name, oid, text	"has_tablespace_privilege_name_id"	s
+has_tablespace_privilege	name, text, text	"has_tablespace_privilege_name_name"	s
+has_tablespace_privilege	oid, oid, text	"has_tablespace_privilege_id_id"	s
+has_tablespace_privilege	oid, text	"has_tablespace_privilege_id"	s
+has_tablespace_privilege	oid, text, text	"has_tablespace_privilege_id_name"	s
+has_tablespace_privilege	text, text	"has_tablespace_privilege_name"	s
+has_type_privilege	name, oid, text	"has_type_privilege_name_id"	s
+has_type_privilege	name, text, text	"has_type_privilege_name_name"	s
+has_type_privilege	oid, oid, text	"has_type_privilege_id_id"	s
+has_type_privilege	oid, text	"has_type_privilege_id"	s
+has_type_privilege	oid, text, text	"has_type_privilege_id_name"	s
+has_type_privilege	text, text	"has_type_privilege_name"	s
+height	box	"box_height"	i
+host	inet	"network_host"	i
+hostmask	inet	"network_hostmask"	i
+icu_unicode_version		"icu_unicode_version"	i
+inet_client_addr		"inet_client_addr"	s
+inet_client_port		"inet_client_port"	s
+inet_merge	inet, inet	"inet_merge"	i
+inet_same_family	inet, inet	"inet_same_family"	i
+inet_server_addr		"inet_server_addr"	s
+inet_server_port		"inet_server_port"	s
+initcap	text	"initcap"	i
+int2	bigint	"int82"	i
+int2	double precision	"dtoi2"	i
+int2	integer	"i4toi2"	i
+int2	jsonb	"jsonb_int2"	i
+int2	numeric	"numeric_int2"	i
+int2	real	"ftoi2"	i
+int4	bigint	"int84"	i
+int4	bit	"bittoint4"	i
+int4	boolean	"bool_int4"	i
+int4	"char"	"chartoi4"	i
+int4	double precision	"dtoi4"	i
+int4	jsonb	"jsonb_int4"	i
+int4	numeric	"numeric_int4"	i
+int4	real	"ftoi4"	i
+int4	smallint	"i2toi4"	i
+int8	bit	"bittoint8"	i
+int8	double precision	"dtoi8"	i
+int8	integer	"int48"	i
+int8	jsonb	"jsonb_int8"	i
+int8	numeric	"numeric_int8"	i
+int8	oid	"oidtoi8"	i
+int8	real	"ftoi8"	i
+int8	smallint	"int28"	i
+interval	interval, integer	"interval_scale"	i
+interval	time without time zone	"time_interval"	i
+is_normalized	text, text	"unicode_is_normalized"	i
+isclosed	path	"path_isclosed"	i
+isempty	anymultirange	"multirange_empty"	i
+isempty	anyrange	"range_empty"	i
+isfinite	date	"date_finite"	i
+isfinite	interval	"interval_finite"	i
+isfinite	timestamp without time zone	"timestamp_finite"	i
+isfinite	timestamp with time zone	"timestamp_finite"	i
+isopen	path	"path_isopen"	i
+json_agg	anyelement	"aggregate_dummy"	s
+json_array_elements	from_json json, OUT value json	"json_array_elements"	i
+json_array_elements_text	from_json json, OUT value text	"json_array_elements_text"	i
+json_array_length	json	"json_array_length"	i
+json_build_array		"json_build_array_noargs"	s
+json_build_array	VARIADIC "any"	"json_build_array"	s
+json_build_object		"json_build_object_noargs"	s
+json_build_object	VARIADIC "any"	"json_build_object"	s
+json_each	from_json json, OUT key text, OUT value json	"json_each"	i
+json_each_text	from_json json, OUT key text, OUT value text	"json_each_text"	i
+json_extract_path	from_json json, VARIADIC path_elems text[]	"json_extract_path"	i
+json_extract_path_text	from_json json, VARIADIC path_elems text[]	"json_extract_path_text"	i
+json_object	text[]	"json_object"	i
+json_object	text[], text[]	"json_object_two_arg"	i
+json_object_agg	key "any", value "any"	"aggregate_dummy"	s
+json_object_keys	json	"json_object_keys"	i
+json_populate_record	base anyelement, from_json json, use_json_as_text boolean	"json_populate_record"	s
+json_populate_recordset	base anyelement, from_json json, use_json_as_text boolean	"json_populate_recordset"	s
+json_strip_nulls	json	"json_strip_nulls"	i
+json_to_record	json	"json_to_record"	s
+json_to_recordset	json	"json_to_recordset"	s
+json_typeof	json	"json_typeof"	i
+jsonb_agg	anyelement	"aggregate_dummy"	s
+jsonb_array_elements	from_json jsonb, OUT value jsonb	"jsonb_array_elements"	i
+jsonb_array_elements_text	from_json jsonb, OUT value text	"jsonb_array_elements_text"	i
+jsonb_array_length	jsonb	"jsonb_array_length"	i
+jsonb_build_array		"jsonb_build_array_noargs"	s
+jsonb_build_array	VARIADIC "any"	"jsonb_build_array"	s
+jsonb_build_object		"jsonb_build_object_noargs"	s
+jsonb_build_object	VARIADIC "any"	"jsonb_build_object"	s
+jsonb_each	from_json jsonb, OUT key text, OUT value jsonb	"jsonb_each"	i
+jsonb_each_text	from_json jsonb, OUT key text, OUT value text	"jsonb_each_text"	i
+jsonb_extract_path	from_json jsonb, VARIADIC path_elems text[]	"jsonb_extract_path"	i
+jsonb_extract_path_text	from_json jsonb, VARIADIC path_elems text[]	"jsonb_extract_path_text"	i
+jsonb_insert	jsonb_in jsonb, path text[], replacement jsonb, insert_after boolean	"jsonb_insert"	i
+jsonb_object	text[]	"jsonb_object"	i
+jsonb_object	text[], text[]	"jsonb_object_two_arg"	i
+jsonb_object_agg	key "any", value "any"	"aggregate_dummy"	i
+jsonb_object_keys	jsonb	"jsonb_object_keys"	i
+jsonb_path_exists	target jsonb, path jsonpath, vars jsonb, silent boolean	"jsonb_path_exists"	i
+jsonb_path_exists_tz	target jsonb, path jsonpath, vars jsonb, silent boolean	"jsonb_path_exists_tz"	s
+jsonb_path_match	target jsonb, path jsonpath, vars jsonb, silent boolean	"jsonb_path_match"	i
+jsonb_path_match_tz	target jsonb, path jsonpath, vars jsonb, silent boolean	"jsonb_path_match_tz"	s
+jsonb_path_query	target jsonb, path jsonpath, vars jsonb, silent boolean	"jsonb_path_query"	i
+jsonb_path_query_array	target jsonb, path jsonpath, vars jsonb, silent boolean	"jsonb_path_query_array"	i
+jsonb_path_query_array_tz	target jsonb, path jsonpath, vars jsonb, silent boolean	"jsonb_path_query_array_tz"	s
+jsonb_path_query_first	target jsonb, path jsonpath, vars jsonb, silent boolean	"jsonb_path_query_first"	i
+jsonb_path_query_first_tz	target jsonb, path jsonpath, vars jsonb, silent boolean	"jsonb_path_query_first_tz"	s
+jsonb_path_query_tz	target jsonb, path jsonpath, vars jsonb, silent boolean	"jsonb_path_query_tz"	s
+jsonb_populate_record	anyelement, jsonb	"jsonb_populate_record"	s
+jsonb_populate_record_valid	anyelement, jsonb	"jsonb_populate_record_valid"	s
+jsonb_populate_recordset	anyelement, jsonb	"jsonb_populate_recordset"	s
+jsonb_pretty	jsonb	"jsonb_pretty"	i
+jsonb_set	jsonb_in jsonb, path text[], replacement jsonb, create_if_missing boolean	"jsonb_set"	i
+jsonb_set_lax	jsonb_in jsonb, path text[], replacement jsonb, create_if_missing boolean, null_value_treatment text	"jsonb_set_lax"	i
+jsonb_strip_nulls	jsonb	"jsonb_strip_nulls"	i
+jsonb_to_record	jsonb	"jsonb_to_record"	s
+jsonb_to_recordset	jsonb	"jsonb_to_recordset"	s
+jsonb_typeof	jsonb	"jsonb_typeof"	i
+justify_days	interval	"interval_justify_days"	i
+justify_hours	interval	"interval_justify_hours"	i
+justify_interval	interval	"interval_justify_interval"	i
+lag	anycompatible, integer, anycompatible	"window_lag_with_offset_and_default"	i
+lag	anyelement	"window_lag"	i
+lag	anyelement, integer	"window_lag_with_offset"	i
+last_value	anyelement	"window_last_value"	i
+lastval		"lastval"	v
+lcm	bigint, bigint	"int8lcm"	i
+lcm	integer, integer	"int4lcm"	i
+lcm	numeric, numeric	"numeric_lcm"	i
+lead	anycompatible, integer, anycompatible	"window_lead_with_offset_and_default"	i
+lead	anyelement	"window_lead"	i
+lead	anyelement, integer	"window_lead_with_offset"	i
+left	text, integer	"text_left"	i
+length	bit	"bitlength"	i
+length	bytea	"byteaoctetlen"	i
+length	bytea, name	"length_in_encoding"	s
+length	character	"bpcharlen"	i
+length	lseg	"lseg_length"	i
+length	path	"path_length"	i
+length	text	"textlen"	i
+length	tsvector	"tsvector_length"	i
+like_escape	bytea, bytea	"like_escape_bytea"	i
+like_escape	text, text	"like_escape"	i
+ln	double precision	"dlog1"	i
+ln	numeric	"numeric_ln"	i
+log	double precision	"dlog10"	i
+log	numeric	""	i
+log	numeric, numeric	"numeric_log"	i
+log10	double precision	"dlog10"	i
+log10	numeric	""	i
+lower	anymultirange	"multirange_lower"	i
+lower	anyrange	"range_lower"	i
+lower	text	"lower"	i
+lower_inc	anymultirange	"multirange_lower_inc"	i
+lower_inc	anyrange	"range_lower_inc"	i
+lower_inf	anymultirange	"multirange_lower_inf"	i
+lower_inf	anyrange	"range_lower_inf"	i
+lpad	text, integer	""	i
+lpad	text, integer, text	"lpad"	i
+ltrim	bytea, bytea	"bytealtrim"	i
+ltrim	text	"ltrim1"	i
+ltrim	text, text	"ltrim"	i
+macaddr8_set7bit	macaddr8	"macaddr8_set7bit"	i
+make_date	year integer, month integer, day integer	"make_date"	i
+make_interval	years integer, months integer, weeks integer, days integer, hours integer, mins integer, secs double precision	"make_interval"	i
+make_time	hour integer, min integer, sec double precision	"make_time"	i
+make_timestamp	year integer, month integer, mday integer, hour integer, min integer, sec double precision	"make_timestamp"	i
+make_timestamptz	year integer, month integer, mday integer, hour integer, min integer, sec double precision	"make_timestamptz"	s
+make_timestamptz	year integer, month integer, mday integer, hour integer, min integer, sec double precision, timezone text	"make_timestamptz_at_timezone"	s
+makeaclitem	oid, oid, text, boolean	"makeaclitem"	i
+masklen	inet	"network_masklen"	i
+max	anyarray	"aggregate_dummy"	i
+max	anyenum	"aggregate_dummy"	i
+max	bigint	"aggregate_dummy"	i
+max	character	"aggregate_dummy"	i
+max	date	"aggregate_dummy"	i
+max	double precision	"aggregate_dummy"	i
+max	inet	"aggregate_dummy"	i
+max	integer	"aggregate_dummy"	i
+max	interval	"aggregate_dummy"	i
+max	money	"aggregate_dummy"	i
+max	numeric	"aggregate_dummy"	i
+max	oid	"aggregate_dummy"	i
+max	pg_lsn	"aggregate_dummy"	i
+max	real	"aggregate_dummy"	i
+max	smallint	"aggregate_dummy"	i
+max	text	"aggregate_dummy"	i
+max	tid	"aggregate_dummy"	i
+max	timestamp without time zone	"aggregate_dummy"	i
+max	timestamp with time zone	"aggregate_dummy"	i
+max	time without time zone	"aggregate_dummy"	i
+max	time with time zone	"aggregate_dummy"	i
+max	xid8	"aggregate_dummy"	i
+md5	bytea	"md5_bytea"	i
+md5	text	"md5_text"	i
+min	anyarray	"aggregate_dummy"	i
+min	anyenum	"aggregate_dummy"	i
+min	bigint	"aggregate_dummy"	i
+min	character	"aggregate_dummy"	i
+min	date	"aggregate_dummy"	i
+min	double precision	"aggregate_dummy"	i
+min	inet	"aggregate_dummy"	i
+min	integer	"aggregate_dummy"	i
+min	interval	"aggregate_dummy"	i
+min	money	"aggregate_dummy"	i
+min	numeric	"aggregate_dummy"	i
+min	oid	"aggregate_dummy"	i
+min	pg_lsn	"aggregate_dummy"	i
+min	real	"aggregate_dummy"	i
+min	smallint	"aggregate_dummy"	i
+min	text	"aggregate_dummy"	i
+min	tid	"aggregate_dummy"	i
+min	timestamp without time zone	"aggregate_dummy"	i
+min	timestamp with time zone	"aggregate_dummy"	i
+min	time without time zone	"aggregate_dummy"	i
+min	time with time zone	"aggregate_dummy"	i
+min	xid8	"aggregate_dummy"	i
+min_scale	numeric	"numeric_min_scale"	i
+mod	bigint, bigint	"int8mod"	i
+mod	integer, integer	"int4mod"	i
+mod	numeric, numeric	"numeric_mod"	i
+mod	smallint, smallint	"int2mod"	i
+mode	ORDER BY anyelement	"aggregate_dummy"	i
+netmask	inet	"network_netmask"	i
+network	inet	"network_network"	i
+normalize	text, text	"unicode_normalize_func"	i
+now		"now"	s
+npoints	path	"path_npoints"	i
+npoints	polygon	"poly_npoints"	i
+nth_value	anyelement, integer	"window_nth_value"	i
+ntile	integer	"window_ntile"	i
+numeric	bigint	"int8_numeric"	i
+numeric	double precision	"float8_numeric"	i
+numeric	integer	"int4_numeric"	i
+numeric	jsonb	"jsonb_numeric"	i
+numeric	money	"cash_numeric"	s
+numeric	numeric, integer	"numeric"	i
+numeric	real	"float4_numeric"	i
+numeric	smallint	"int2_numeric"	i
+numnode	tsquery	"tsquery_numnode"	i
+octet_length	bit	"bitoctetlength"	i
+octet_length	bytea	"byteaoctetlen"	i
+octet_length	character	"bpcharoctetlen"	i
+octet_length	text	"textoctetlen"	i
+overlaps	timestamp without time zone, interval, timestamp without time zone, interval	""	i
+overlaps	timestamp without time zone, interval, timestamp without time zone, timestamp without time zone	""	i
+overlaps	timestamp without time zone, timestamp without time zone, timestamp without time zone, interval	""	i
+overlaps	timestamp without time zone, timestamp without time zone, timestamp without time zone, timestamp without time zone	"overlaps_timestamp"	i
+overlaps	timestamp with time zone, interval, timestamp with time zone, interval	""	s
+overlaps	timestamp with time zone, interval, timestamp with time zone, timestamp with time zone	""	s
+overlaps	timestamp with time zone, timestamp with time zone, timestamp with time zone, interval	""	s
+overlaps	timestamp with time zone, timestamp with time zone, timestamp with time zone, timestamp with time zone	"overlaps_timestamp"	i
+overlaps	time without time zone, interval, time without time zone, interval	""	i
+overlaps	time without time zone, interval, time without time zone, time without time zone	""	i
+overlaps	time without time zone, time without time zone, time without time zone, interval	""	i
+overlaps	time without time zone, time without time zone, time without time zone, time without time zone	"overlaps_time"	i
+overlaps	time with time zone, time with time zone, time with time zone, time with time zone	"overlaps_timetz"	i
+overlay	bit, bit, integer	"bitoverlay_no_len"	i
+overlay	bit, bit, integer, integer	"bitoverlay"	i
+overlay	bytea, bytea, integer	"byteaoverlay_no_len"	i
+overlay	bytea, bytea, integer, integer	"byteaoverlay"	i
+overlay	text, text, integer	"textoverlay_no_len"	i
+overlay	text, text, integer, integer	"textoverlay"	i
+parse_ident	str text, strict boolean	"parse_ident"	i
+pclose	path	"path_close"	i
+percent_rank		"window_percent_rank"	i
+percent_rank	VARIADIC "any" ORDER BY VARIADIC "any"	"aggregate_dummy"	i
+percentile_cont	double precision ORDER BY double precision	"aggregate_dummy"	i
+percentile_cont	double precision[] ORDER BY double precision	"aggregate_dummy"	i
+percentile_cont	double precision ORDER BY interval	"aggregate_dummy"	i
+percentile_cont	double precision[] ORDER BY interval	"aggregate_dummy"	i
+percentile_disc	double precision ORDER BY anyelement	"aggregate_dummy"	i
+percentile_disc	double precision[] ORDER BY anyelement	"aggregate_dummy"	i
+pg_available_wal_summaries	OUT tli bigint, OUT start_lsn pg_lsn, OUT end_lsn pg_lsn	"pg_available_wal_summaries"	v
+pg_backend_pid		"pg_backend_pid"	s
+pg_basetype	regtype	"pg_basetype"	s
+pg_blocking_pids	integer	"pg_blocking_pids"	v
+pg_char_to_encoding	name	"PG_char_to_encoding"	s
+pg_client_encoding		"pg_client_encoding"	s
+pg_collation_for	"any"	"pg_collation_for"	s
+pg_collation_is_visible	oid	"pg_collation_is_visible"	s
+pg_column_compression	"any"	"pg_column_compression"	s
+pg_column_size	"any"	"pg_column_size"	s
+pg_column_toast_chunk_id	"any"	"pg_column_toast_chunk_id"	s
+pg_conf_load_time		"pg_conf_load_time"	s
+pg_control_checkpoint	OUT checkpoint_lsn pg_lsn, OUT redo_lsn pg_lsn, OUT redo_wal_file text, OUT timeline_id integer, OUT prev_timeline_id integer, OUT full_page_writes boolean, OUT next_xid text, OUT next_oid oid, OUT next_multixact_id xid, OUT next_multi_offset xid, OUT oldest_xid xid, OUT oldest_xid_dbid oid, OUT oldest_active_xid xid, OUT oldest_multi_xid xid, OUT oldest_multi_dbid oid, OUT oldest_commit_ts_xid xid, OUT newest_commit_ts_xid xid, OUT checkpoint_time timestamp with time zone	"pg_control_checkpoint"	v
+pg_control_init	OUT max_data_alignment integer, OUT database_block_size integer, OUT blocks_per_segment integer, OUT wal_block_size integer, OUT bytes_per_wal_segment integer, OUT max_identifier_length integer, OUT max_index_columns integer, OUT max_toast_chunk_size integer, OUT large_object_chunk_size integer, OUT float8_pass_by_value boolean, OUT data_page_checksum_version integer	"pg_control_init"	v
+pg_control_recovery	OUT min_recovery_end_lsn pg_lsn, OUT min_recovery_end_timeline integer, OUT backup_start_lsn pg_lsn, OUT backup_end_lsn pg_lsn, OUT end_of_backup_record_required boolean	"pg_control_recovery"	v
+pg_control_system	OUT pg_control_version integer, OUT catalog_version_no integer, OUT system_identifier bigint, OUT pg_control_last_modified timestamp with time zone	"pg_control_system"	v
+pg_conversion_is_visible	oid	"pg_conversion_is_visible"	s
+pg_current_logfile		"pg_current_logfile"	v
+pg_current_logfile	text	"pg_current_logfile_1arg"	v
+pg_current_snapshot		"pg_current_snapshot"	s
+pg_database_size	name	"pg_database_size_name"	v
+pg_database_size	oid	"pg_database_size_oid"	v
+pg_encoding_to_char	integer	"PG_encoding_to_char"	s
+pg_function_is_visible	oid	"pg_function_is_visible"	s
+pg_get_catalog_foreign_keys	OUT fktable regclass, OUT fkcols text[], OUT pktable regclass, OUT pkcols text[], OUT is_array boolean, OUT is_opt boolean	"pg_get_catalog_foreign_keys"	s
+pg_get_constraintdef	oid	"pg_get_constraintdef"	s
+pg_get_constraintdef	oid, boolean	"pg_get_constraintdef_ext"	s
+pg_get_expr	pg_node_tree, oid	"pg_get_expr"	s
+pg_get_expr	pg_node_tree, oid, boolean	"pg_get_expr_ext"	s
+pg_get_function_arguments	oid	"pg_get_function_arguments"	s
+pg_get_function_identity_arguments	oid	"pg_get_function_identity_arguments"	s
+pg_get_function_result	oid	"pg_get_function_result"	s
+pg_get_functiondef	oid	"pg_get_functiondef"	s
+pg_get_indexdef	oid	"pg_get_indexdef"	s
+pg_get_indexdef	oid, integer, boolean	"pg_get_indexdef_ext"	s
+pg_get_keywords	OUT word text, OUT catcode "char", OUT barelabel boolean, OUT catdesc text, OUT baredesc text	"pg_get_keywords"	s
+pg_get_partkeydef	oid	"pg_get_partkeydef"	s
+pg_get_ruledef	oid	"pg_get_ruledef"	s
+pg_get_ruledef	oid, boolean	"pg_get_ruledef_ext"	s
+pg_get_serial_sequence	text, text	"pg_get_serial_sequence"	s
+pg_get_statisticsobjdef	oid	"pg_get_statisticsobjdef"	s
+pg_get_triggerdef	oid	"pg_get_triggerdef"	s
+pg_get_triggerdef	oid, boolean	"pg_get_triggerdef_ext"	s
+pg_get_userbyid	oid	"pg_get_userbyid"	s
+pg_get_viewdef	oid	"pg_get_viewdef"	s
+pg_get_viewdef	oid, boolean	"pg_get_viewdef_ext"	s
+pg_get_viewdef	oid, integer	"pg_get_viewdef_wrap"	s
+pg_get_viewdef	text	"pg_get_viewdef_name"	s
+pg_get_viewdef	text, boolean	"pg_get_viewdef_name_ext"	s
+pg_get_wal_summarizer_state	OUT summarized_tli bigint, OUT summarized_lsn pg_lsn, OUT pending_lsn pg_lsn, OUT summarizer_pid integer	"pg_get_wal_summarizer_state"	v
+pg_has_role	name, name, text	"pg_has_role_name_name"	s
+pg_has_role	name, oid, text	"pg_has_role_name_id"	s
+pg_has_role	name, text	"pg_has_role_name"	s
+pg_has_role	oid, name, text	"pg_has_role_id_name"	s
+pg_has_role	oid, oid, text	"pg_has_role_id_id"	s
+pg_has_role	oid, text	"pg_has_role_id"	s
+pg_index_column_has_property	regclass, integer, text	"pg_index_column_has_property"	s
+pg_index_has_property	regclass, text	"pg_index_has_property"	s
+pg_indexam_has_property	oid, text	"pg_indexam_has_property"	s
+pg_indexes_size	regclass	"pg_indexes_size"	v
+pg_input_error_info	value text, type_name text, OUT message text, OUT detail text, OUT hint text, OUT sql_error_code text	"pg_input_error_info"	s
+pg_input_is_valid	text, text	"pg_input_is_valid"	s
+pg_is_in_recovery		"pg_is_in_recovery"	v
+pg_is_other_temp_schema	oid	"pg_is_other_temp_schema"	s
+pg_jit_available		"pg_jit_available"	v
+pg_listening_channels		"pg_listening_channels"	s
+pg_my_temp_schema		"pg_my_temp_schema"	s
+pg_notification_queue_usage		"pg_notification_queue_usage"	v
+pg_opclass_is_visible	oid	"pg_opclass_is_visible"	s
+pg_operator_is_visible	oid	"pg_operator_is_visible"	s
+pg_opfamily_is_visible	oid	"pg_opfamily_is_visible"	s
+pg_options_to_table	options_array text[], OUT option_name text, OUT option_value text	"pg_options_to_table"	s
+pg_postmaster_start_time		"pg_postmaster_start_time"	s
+pg_relation_filenode	regclass	"pg_relation_filenode"	s
+pg_relation_size	regclass	""	v
+pg_relation_size	regclass, text	"pg_relation_size"	v
+pg_safe_snapshot_blocking_pids	integer	"pg_safe_snapshot_blocking_pids"	v
+pg_settings_get_flags	text	"pg_settings_get_flags"	s
+pg_size_bytes	text	"pg_size_bytes"	i
+pg_size_pretty	bigint	"pg_size_pretty"	i
+pg_size_pretty	numeric	"pg_size_pretty_numeric"	i
+pg_snapshot_xip	pg_snapshot	"pg_snapshot_xip"	i
+pg_statistics_obj_is_visible	oid	"pg_statistics_obj_is_visible"	s
+pg_table_is_visible	oid	"pg_table_is_visible"	s
+pg_table_size	regclass	"pg_table_size"	v
+pg_tablespace_databases	oid	"pg_tablespace_databases"	s
+pg_tablespace_location	oid	"pg_tablespace_location"	s
+pg_tablespace_size	name	"pg_tablespace_size_name"	v
+pg_tablespace_size	oid	"pg_tablespace_size_oid"	v
+pg_total_relation_size	regclass	"pg_total_relation_size"	v
+pg_trigger_depth		"pg_trigger_depth"	s
+pg_ts_config_is_visible	oid	"pg_ts_config_is_visible"	s
+pg_ts_dict_is_visible	oid	"pg_ts_dict_is_visible"	s
+pg_ts_parser_is_visible	oid	"pg_ts_parser_is_visible"	s
+pg_ts_template_is_visible	oid	"pg_ts_template_is_visible"	s
+pg_type_is_visible	oid	"pg_type_is_visible"	s
+pg_typeof	"any"	"pg_typeof"	s
+pg_wal_summary_contents	tli bigint, start_lsn pg_lsn, end_lsn pg_lsn, OUT relfilenode oid, OUT reltablespace oid, OUT reldatabase oid, OUT relforknumber smallint, OUT relblocknumber bigint, OUT is_limit_block boolean	"pg_wal_summary_contents"	v
+pg_xact_commit_timestamp	xid	"pg_xact_commit_timestamp"	v
+phraseto_tsquery	regconfig, text	"phraseto_tsquery_byid"	i
+phraseto_tsquery	text	"phraseto_tsquery"	s
+pi		"dpi"	i
+plainto_tsquery	regconfig, text	"plainto_tsquery_byid"	i
+plainto_tsquery	text	"plainto_tsquery"	s
+popen	path	"path_open"	i
+position	bit, bit	"bitposition"	i
+position	bytea, bytea	"byteapos"	i
+position	text, text	"textpos"	i
+power	double precision, double precision	"dpow"	i
+power	numeric, numeric	"numeric_power"	i
+querytree	tsquery	"tsquerytree"	i
+quote_ident	text	"quote_ident"	i
+quote_literal	anyelement	"select pg_catalog.quote_literal($1::pg_catalog.text)"	s
+quote_literal	text	"quote_literal"	i
+quote_nullable	anyelement	"select pg_catalog.quote_nullable($1::pg_catalog.text)"	s
+quote_nullable	text	"quote_nullable"	i
+radians	double precision	"radians"	i
+radius	circle	"circle_radius"	i
+range_merge	anymultirange	"range_merge_from_multirange"	i
+range_merge	anyrange, anyrange	"range_merge"	i
+rank		"window_rank"	i
+rank	VARIADIC "any" ORDER BY VARIADIC "any"	"aggregate_dummy"	i
+regclass	text	"text_regclass"	s
+regexp_count	text, text	"regexp_count_no_start"	i
+regexp_count	text, text, integer	"regexp_count_no_flags"	i
+regexp_count	text, text, integer, text	"regexp_count"	i
+regexp_instr	text, text	"regexp_instr_no_start"	i
+regexp_instr	text, text, integer	"regexp_instr_no_n"	i
+regexp_instr	text, text, integer, integer	"regexp_instr_no_endoption"	i
+regexp_instr	text, text, integer, integer, integer	"regexp_instr_no_flags"	i
+regexp_instr	text, text, integer, integer, integer, text	"regexp_instr_no_subexpr"	i
+regexp_instr	text, text, integer, integer, integer, text, integer	"regexp_instr"	i
+regexp_like	text, text	"regexp_like_no_flags"	i
+regexp_like	text, text, text	"regexp_like"	i
+regexp_match	text, text	"regexp_match_no_flags"	i
+regexp_match	text, text, text	"regexp_match"	i
+regexp_matches	text, text	"regexp_matches_no_flags"	i
+regexp_matches	text, text, text	"regexp_matches"	i
+regexp_replace	text, text, text	"textregexreplace_noopt"	i
+regexp_replace	text, text, text, integer	"textregexreplace_extended_no_n"	i
+regexp_replace	text, text, text, integer, integer	"textregexreplace_extended_no_flags"	i
+regexp_replace	text, text, text, integer, integer, text	"textregexreplace_extended"	i
+regexp_replace	text, text, text, text	"textregexreplace"	i
+regexp_split_to_array	text, text	"regexp_split_to_array_no_flags"	i
+regexp_split_to_array	text, text, text	"regexp_split_to_array"	i
+regexp_split_to_table	text, text	"regexp_split_to_table_no_flags"	i
+regexp_split_to_table	text, text, text	"regexp_split_to_table"	i
+regexp_substr	text, text	"regexp_substr_no_start"	i
+regexp_substr	text, text, integer	"regexp_substr_no_n"	i
+regexp_substr	text, text, integer, integer	"regexp_substr_no_flags"	i
+regexp_substr	text, text, integer, integer, text	"regexp_substr_no_subexpr"	i
+regexp_substr	text, text, integer, integer, text, integer	"regexp_substr"	i
+repeat	text, integer	"repeat"	i
+replace	text, text, text	"replace_text"	i
+reverse	text	"text_reverse"	i
+right	text, integer	"text_right"	i
+round	double precision	"dround"	i
+round	numeric	""	i
+round	numeric, integer	"numeric_round"	i
+row_number		"window_row_number"	i
+row_security_active	oid	"row_security_active"	s
+row_security_active	text	"row_security_active_name"	s
+row_to_json	record	"row_to_json"	s
+row_to_json	record, boolean	"row_to_json_pretty"	s
+rpad	text, integer	""	i
+rpad	text, integer, text	"rpad"	i
+rtrim	bytea, bytea	"byteartrim"	i
+rtrim	text	"rtrim1"	i
+rtrim	text, text	"rtrim"	i
+scale	numeric	"numeric_scale"	i
+session_user		"session_user"	s
+set_bit	bit, integer, integer	"bitsetbit"	i
+set_bit	bytea, bigint, integer	"byteaSetBit"	i
+set_masklen	cidr, integer	"cidr_set_masklen"	i
+set_masklen	inet, integer	"inet_set_masklen"	i
+setweight	tsvector, "char"	"tsvector_setweight"	i
+setweight	tsvector, "char", text[]	"tsvector_setweight_by_filter"	i
+sign	double precision	"dsign"	i
+sign	numeric	"numeric_sign"	i
+similar_to_escape	text	"similar_to_escape_1"	i
+similar_to_escape	text, text	"similar_to_escape_2"	i
+sin	double precision	"dsin"	i
+sind	double precision	"dsind"	i
+sinh	double precision	"dsinh"	i
+split_part	text, text, integer	"split_part"	i
+sqrt	double precision	"dsqrt"	i
+sqrt	numeric	"numeric_sqrt"	i
+starts_with	text, text	"text_starts_with"	i
+statement_timestamp		"statement_timestamp"	s
+string_agg	value bytea, delimiter bytea	"aggregate_dummy"	i
+string_agg	value text, delimiter text	"aggregate_dummy"	i
+string_to_array	text, text	"text_to_array"	i
+string_to_array	text, text, text	"text_to_array_null"	i
+string_to_table	text, text	"text_to_table"	i
+string_to_table	text, text, text	"text_to_table_null"	i
+strip	tsvector	"tsvector_strip"	i
+strpos	text, text	"textpos"	i
+substr	bytea, integer	"bytea_substr_no_len"	i
+substr	bytea, integer, integer	"bytea_substr"	i
+substr	text, integer	"text_substr_no_len"	i
+substr	text, integer, integer	"text_substr"	i
+substring	bit, integer	"bitsubstr_no_len"	i
+substring	bit, integer, integer	"bitsubstr"	i
+substring	bytea, integer	"bytea_substr_no_len"	i
+substring	bytea, integer, integer	"bytea_substr"	i
+substring	text, integer	"text_substr_no_len"	i
+substring	text, integer, integer	"text_substr"	i
+substring	text, text	"textregexsubstr"	i
+substring	text, text, text	""	i
+sum	bigint	"aggregate_dummy"	i
+sum	double precision	"aggregate_dummy"	i
+sum	integer	"aggregate_dummy"	i
+sum	interval	"aggregate_dummy"	i
+sum	money	"aggregate_dummy"	i
+sum	numeric	"aggregate_dummy"	i
+sum	real	"aggregate_dummy"	i
+sum	smallint	"aggregate_dummy"	i
+system_user		"system_user"	s
+tan	double precision	"dtan"	i
+tand	double precision	"dtand"	i
+tanh	double precision	"dtanh"	i
+text	boolean	"booltext"	i
+text	"char"	"char_text"	i
+text	character	"rtrim1"	i
+text	inet	"network_show"	i
+text	name	"name_text"	i
+text	xml	"xmltotext"	i
+time	interval	"interval_time"	i
+time	timestamp without time zone	"timestamp_time"	i
+time	timestamp with time zone	"timestamptz_time"	s
+time	time without time zone, integer	"time_scale"	i
+time	time with time zone	"timetz_time"	i
+timeofday		"timeofday"	v
+timestamp	date	"date_timestamp"	i
+timestamp	date, time without time zone	"datetime_timestamp"	i
+timestamp	timestamp without time zone, integer	"timestamp_scale"	i
+timestamp	timestamp with time zone	"timestamptz_timestamp"	s
+timestamptz	date	"date_timestamptz"	s
+timestamptz	date, time without time zone	""	s
+timestamptz	date, time with time zone	"datetimetz_timestamptz"	i
+timestamptz	timestamp without time zone	"timestamp_timestamptz"	s
+timestamptz	timestamp with time zone, integer	"timestamptz_scale"	i
+timetz	timestamp with time zone	"timestamptz_timetz"	s
+timetz	time without time zone	"time_timetz"	s
+timetz	time with time zone, integer	"timetz_scale"	i
+timezone	interval, timestamp without time zone	"timestamp_izone"	i
+timezone	interval, timestamp with time zone	"timestamptz_izone"	i
+timezone	interval, time with time zone	"timetz_izone"	i
+timezone	text, timestamp without time zone	"timestamp_zone"	i
+timezone	text, timestamp with time zone	"timestamptz_zone"	i
+timezone	text, time with time zone	"timetz_zone"	s
+timezone	timestamp without time zone	"timestamp_at_local"	s
+timezone	timestamp with time zone	"timestamptz_at_local"	s
+timezone	time with time zone	"timetz_at_local"	s
+to_ascii	text	"to_ascii_default"	i
+to_ascii	text, integer	"to_ascii_enc"	i
+to_ascii	text, name	"to_ascii_encname"	i
+to_bin	bigint	"to_bin64"	i
+to_bin	integer	"to_bin32"	i
+to_char	bigint, text	"int8_to_char"	s
+to_char	double precision, text	"float8_to_char"	s
+to_char	integer, text	"int4_to_char"	s
+to_char	interval, text	"interval_to_char"	s
+to_char	numeric, text	"numeric_to_char"	s
+to_char	real, text	"float4_to_char"	s
+to_char	timestamp without time zone, text	"timestamp_to_char"	s
+to_char	timestamp with time zone, text	"timestamptz_to_char"	s
+to_date	text, text	"to_date"	s
+to_hex	bigint	"to_hex64"	i
+to_hex	integer	"to_hex32"	i
+to_json	anyelement	"to_json"	s
+to_jsonb	anyelement	"to_jsonb"	s
+to_number	text, text	"numeric_to_number"	s
+to_oct	bigint	"to_oct64"	i
+to_oct	integer	"to_oct32"	i
+to_regclass	text	"to_regclass"	s
+to_regcollation	text	"to_regcollation"	s
+to_regnamespace	text	"to_regnamespace"	s
+to_regoper	text	"to_regoper"	s
+to_regoperator	text	"to_regoperator"	s
+to_regproc	text	"to_regproc"	s
+to_regprocedure	text	"to_regprocedure"	s
+to_regrole	text	"to_regrole"	s
+to_regtype	text	"to_regtype"	s
+to_regtypemod	text	"to_regtypemod"	s
+to_timestamp	double precision	"float8_timestamptz"	i
+to_timestamp	text, text	"to_timestamp"	s
+to_tsquery	regconfig, text	"to_tsquery_byid"	i
+to_tsquery	text	"to_tsquery"	s
+to_tsvector	json	"json_string_to_tsvector"	s
+to_tsvector	jsonb	"jsonb_string_to_tsvector"	s
+to_tsvector	regconfig, json	"json_string_to_tsvector_byid"	i
+to_tsvector	regconfig, jsonb	"jsonb_string_to_tsvector_byid"	i
+to_tsvector	regconfig, text	"to_tsvector_byid"	i
+to_tsvector	text	"to_tsvector"	s
+transaction_timestamp		"now"	s
+translate	text, text, text	"translate"	i
+trim_array	anyarray, integer	"trim_array"	i
+trim_scale	numeric	"numeric_trim_scale"	i
+trunc	double precision	"dtrunc"	i
+trunc	macaddr	"macaddr_trunc"	i
+trunc	macaddr8	"macaddr8_trunc"	i
+trunc	numeric	""	i
+trunc	numeric, integer	"numeric_trunc"	i
+ts_debug	config regconfig, document text, OUT alias text, OUT description text, OUT token text, OUT dictionaries regdictionary[], OUT dictionary regdictionary, OUT lexemes text[]	""	s
+ts_debug	document text, OUT alias text, OUT description text, OUT token text, OUT dictionaries regdictionary[], OUT dictionary regdictionary, OUT lexemes text[]	""	s
+ts_delete	tsvector, text	"tsvector_delete_str"	i
+ts_delete	tsvector, text[]	"tsvector_delete_arr"	i
+ts_filter	tsvector, "char"[]	"tsvector_filter"	i
+ts_headline	jsonb, tsquery	"ts_headline_jsonb"	s
+ts_headline	jsonb, tsquery, text	"ts_headline_jsonb_opt"	s
+ts_headline	json, tsquery	"ts_headline_json"	s
+ts_headline	json, tsquery, text	"ts_headline_json_opt"	s
+ts_headline	regconfig, jsonb, tsquery	"ts_headline_jsonb_byid"	i
+ts_headline	regconfig, jsonb, tsquery, text	"ts_headline_jsonb_byid_opt"	i
+ts_headline	regconfig, json, tsquery	"ts_headline_json_byid"	i
+ts_headline	regconfig, json, tsquery, text	"ts_headline_json_byid_opt"	i
+ts_headline	regconfig, text, tsquery	"ts_headline_byid"	i
+ts_headline	regconfig, text, tsquery, text	"ts_headline_byid_opt"	i
+ts_headline	text, tsquery	"ts_headline"	s
+ts_headline	text, tsquery, text	"ts_headline_opt"	s
+ts_lexize	regdictionary, text	"ts_lexize"	i
+ts_parse	parser_name text, txt text, OUT tokid integer, OUT token text	"ts_parse_byname"	s
+ts_parse	parser_oid oid, txt text, OUT tokid integer, OUT token text	"ts_parse_byid"	i
+ts_rank	real[], tsvector, tsquery	"ts_rank_wtt"	i
+ts_rank	real[], tsvector, tsquery, integer	"ts_rank_wttf"	i
+ts_rank	tsvector, tsquery	"ts_rank_tt"	i
+ts_rank	tsvector, tsquery, integer	"ts_rank_ttf"	i
+ts_rank_cd	real[], tsvector, tsquery	"ts_rankcd_wtt"	i
+ts_rank_cd	real[], tsvector, tsquery, integer	"ts_rankcd_wttf"	i
+ts_rank_cd	tsvector, tsquery	"ts_rankcd_tt"	i
+ts_rank_cd	tsvector, tsquery, integer	"ts_rankcd_ttf"	i
+ts_token_type	parser_name text, OUT tokid integer, OUT alias text, OUT description text	"ts_token_type_byname"	s
+ts_token_type	parser_oid oid, OUT tokid integer, OUT alias text, OUT description text	"ts_token_type_byid"	i
+tsvector_to_array	tsvector	"tsvector_to_array"	i
+unicode_assigned	text	"unicode_assigned"	i
+unicode_version		"unicode_version"	i
+unistr	text	"unistr"	i
+unnest	anyarray	"array_unnest"	i
+unnest	anymultirange	"multirange_unnest"	i
+unnest	tsvector tsvector, OUT lexeme text, OUT positions smallint[], OUT weights text[]	"tsvector_unnest"	i
+upper	anymultirange	"multirange_upper"	i
+upper	anyrange	"range_upper"	i
+upper	text	"upper"	i
+upper_inc	anymultirange	"multirange_upper_inc"	i
+upper_inc	anyrange	"range_upper_inc"	i
+upper_inf	anymultirange	"multirange_upper_inf"	i
+upper_inf	anyrange	"range_upper_inf"	i
+version		"pgsql_version"	s
+websearch_to_tsquery	regconfig, text	"websearch_to_tsquery_byid"	i
+websearch_to_tsquery	text	"websearch_to_tsquery"	s
+width	box	"box_width"	i
+width_bucket	anycompatible, anycompatiblearray	"width_bucket_array"	i
+width_bucket	double precision, double precision, double precision, integer	"width_bucket_float8"	i
+width_bucket	numeric, numeric, numeric, integer	"width_bucket_numeric"	i
+xml	text	"texttoxml"	s
+xml_is_well_formed	text	"xml_is_well_formed"	s
+xml_is_well_formed_content	text	"xml_is_well_formed_content"	i
+xml_is_well_formed_document	text	"xml_is_well_formed_document"	i
+xmlagg	xml	"aggregate_dummy"	i
+xmlcomment	text	"xmlcomment"	i
+xmlexists	text, xml	"xmlexists"	i
+xpath	text, xml	""	i
+xpath	text, xml, text[]	"xpath"	i
+xpath_exists	text, xml	""	i
+xpath_exists	text, xml, text[]	"xpath_exists"	i
