@@ -1,0 +1,53 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.JoongHyuk-Shin/multigres-mcp",
+  "title": "Multigres",
+  "description": "Postgres diagnostics and cluster operations for Multigres clusters.",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/JoongHyuk-Shin/multigres-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "mcpb",
+      "identifier": "https://github.com/JoongHyuk-Shin/multigres-mcp/releases/download/v0.1.0/multigres-mcp-0.1.0.mcpb",
+      "fileSha256": "2e1e62db6822ccdb04f9ee29bf29cf100b68113d181cee5baaafc676421f14b9",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "DATABASE_URI",
+          "description": "Postgres connection string of the Multigres gateway.",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "MULTIGRES_ADMIN_URL",
+          "description": "multiadmin HTTP address. The cluster tools are registered only when it is set."
+        },
+        {
+          "name": "MULTIGRES_ADMIN_TOKEN",
+          "description": "Bearer token for multiadmin started with --enable-auth.",
+          "isSecret": true
+        },
+        {
+          "name": "MULTIGRES_NODE_HOST_MAP",
+          "description": "reported=reachable host pairs, comma separated, for direct node connections."
+        },
+        {
+          "name": "MULTIGRES_MCP_ACCESS_MODE",
+          "description": "restricted (read-only) or unrestricted (adds the write tools).",
+          "default": "restricted",
+          "choices": ["restricted", "unrestricted"]
+        },
+        {
+          "name": "MULTIGRES_MCP_SQL_TIMEOUT",
+          "description": "Statement timeout for the SQL every tool sends, as a Go duration.",
+          "default": "25s"
+        }
+      ]
+    }
+  ]
+}

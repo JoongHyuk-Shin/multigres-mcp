@@ -1,0 +1,85 @@
+{
+  "manifest_version": "0.3",
+  "name": "multigres-mcp",
+  "display_name": "Multigres",
+  "version": "0.1.0",
+  "description": "Postgres diagnostics and cluster operations for Multigres clusters.",
+  "long_description": "Postgres diagnostics (schemas and objects, read-only SQL, query plans with hypothetical indexes, top queries, index advice, health checks) and cluster tools: cluster status and backups through multiadmin, node logs over a direct connection to each node, and in the unrestricted mode primary switchover and backup control. Read-only by default.",
+  "author": {
+    "name": "JoongHyuk Shin",
+    "url": "https://github.com/JoongHyuk-Shin"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JoongHyuk-Shin/multigres-mcp"
+  },
+  "homepage": "https://github.com/JoongHyuk-Shin/multigres-mcp",
+  "support": "https://github.com/JoongHyuk-Shin/multigres-mcp/issues",
+  "license": "Apache-2.0",
+  "keywords": ["multigres", "postgres", "postgresql", "database", "diagnostics"],
+  "server": {
+    "type": "binary",
+    "entry_point": "server/launch.sh",
+    "mcp_config": {
+      "command": "/bin/sh",
+      "args": ["${__dirname}/server/launch.sh"],
+      "env": {
+        "DATABASE_URI": "${user_config.database_url}",
+        "MULTIGRES_ADMIN_URL": "${user_config.admin_url}",
+        "MULTIGRES_ADMIN_TOKEN": "${user_config.admin_token}",
+        "MULTIGRES_NODE_HOST_MAP": "${user_config.node_host_map}",
+        "MULTIGRES_MCP_ACCESS_MODE": "${user_config.access_mode}",
+        "MULTIGRES_MCP_SQL_TIMEOUT": "${user_config.sql_timeout}"
+      },
+      "platform_overrides": {
+        "win32": {
+          "command": "${__dirname}/server/multigres-mcp-windows-amd64.exe",
+          "args": []
+        }
+      }
+    }
+  },
+  "user_config": {
+    "database_url": {
+      "type": "string",
+      "title": "Gateway connection string",
+      "description": "Postgres connection string of the Multigres gateway, for example postgres://postgres:postgres@localhost:15432/postgres",
+      "required": true,
+      "sensitive": true
+    },
+    "admin_url": {
+      "type": "string",
+      "title": "multiadmin address",
+      "description": "multiadmin HTTP address, for example http://localhost:15000. The cluster tools are registered only when it is set.",
+      "default": ""
+    },
+    "admin_token": {
+      "type": "string",
+      "title": "multiadmin token",
+      "description": "Bearer token for multiadmin started with --enable-auth.",
+      "sensitive": true,
+      "default": ""
+    },
+    "node_host_map": {
+      "type": "string",
+      "title": "Node host map",
+      "description": "reported=reachable host pairs, comma separated, for direct node connections. See the README.",
+      "default": ""
+    },
+    "access_mode": {
+      "type": "string",
+      "title": "Access mode",
+      "description": "restricted (read-only) or unrestricted (adds the write tools).",
+      "default": "restricted"
+    },
+    "sql_timeout": {
+      "type": "string",
+      "title": "SQL timeout",
+      "description": "Statement timeout for the SQL every tool sends, as a Go duration such as 25s.",
+      "default": "25s"
+    }
+  },
+  "compatibility": {
+    "platforms": ["darwin", "linux", "win32"]
+  }
+}

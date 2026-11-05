@@ -9,6 +9,10 @@ The server is read-only by default. Write tools are registered only in the unres
 
 It has been tested against a local Multigres Docker cluster built from commit `49e7a2f7d4fe` (2026-11-02, PostgreSQL 17.7, two cells) on Linux with Docker Engine. Other setups have not been tested.
 
+## Install
+
+Each [release](https://github.com/JoongHyuk-Shin/multigres-mcp/releases) has a `multigres-mcp-<version>.mcpb` file. It is an [MCP Bundle](https://github.com/modelcontextprotocol/mcpb): clients that install bundles ask for the settings under "Configuration" and run the server. It is also a zip file whose `server/` directory holds binaries for Linux and macOS on amd64 and arm64 and for Windows on amd64, which any other client can run directly.
+
 ## Build
 
 Requires Go 1.26 or later.
@@ -20,6 +24,8 @@ go build -o multigres-mcp ./cmd/multigres-mcp
 ```
 
 The server talks MCP over standard input and output. `./multigres-mcp --help` prints the options.
+
+`packaging/build-mcpb.sh` builds the release bundle into `dist/`. It also needs jq, Node.js and openssl.
 
 ## Configuration
 
