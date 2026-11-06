@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -52,5 +53,15 @@ func run() error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	return tools.NewServer(deps, version).Run(ctx, &mcp.StdioTransport{})
+	return tools.NewServer(deps, serverVersion()).Run(ctx, &mcp.StdioTransport{})
+}
+
+func serverVersion() string {
+	if version != "dev" {
+		return version
+	}
+	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return info.Main.Version
+	}
+	return version
 }
