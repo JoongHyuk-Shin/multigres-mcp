@@ -106,6 +106,9 @@ func adminCall(ctx context.Context) (context.Context, context.CancelFunc) {
 }
 
 func (d *Deps) poolers(ctx context.Context) ([]*clustermetadatapb.Multipooler, error) {
+	if d.Admin == nil {
+		return nil, admin.ErrNotConfigured
+	}
 	callCtx, cancel := adminCall(ctx)
 	defer cancel()
 	return d.Admin.Poolers(callCtx)

@@ -4,6 +4,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -144,5 +145,44 @@ INSERT INTO %[1]s.lockme VALUES (1)`, schema))
 			replica := h.mustCall("diagnose", diagnoseInput{Node: admin.NodeName(pooler), Checks: []string{"replication"}})
 			mustContain(t, checkSection(t, replica, "replication"), "this node is a replica: true")
 		}
+	}
+}
+
+func TestToolsWithoutAdminServerReportItInsteadOfCrashing(t *testing.T) {
+	cfg := clusterConfig(config.Restricted)
+	cfg.AdminURL = ""
+	h := newHarness(t, cfg)
+	notConfigured := admin.ErrNotConfigured.Error()
+
+	mustContain(t, sectionOf(t, h.mustCall("diagnose", diagnoseInput{}), "log"), "could not check: "+notConfigured)
+
+	listed, err := h.client.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	withNode := 0
+	for _, tool := range listed.Tools {
+		raw, err := json.Marshal(tool.InputSchema)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var schema struct {
+			Properties map[string]any `json:"properties"`
+		}
+		if err := json.Unmarshal(raw, &schema); err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := schema.Properties["node"]; !ok {
+			continue
+		}
+		withNode++
+		text, isError := h.call(tool.Name, map[string]any{"node": "primary"})
+		if !isError {
+			t.Fatalf("%s with a node and no admin server did not fail:\n%s", tool.Name, text)
+		}
+		mustContain(t, text, notConfigured)
+	}
+	if withNode != 2 {
+		t.Fatalf("expected get_top_queries and diagnose to take a node without an admin server, found %d tools", withNode)
 	}
 }
