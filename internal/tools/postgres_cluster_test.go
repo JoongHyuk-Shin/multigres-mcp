@@ -211,7 +211,7 @@ func TestCatalogToolsShowTheWholeSchemaToARoleWithoutPrivileges(t *testing.T) {
 	schema := testenv.Schema(t, "catalogrole")
 	setup := gateway(t)
 	testenv.Exec(t, setup, fmt.Sprintf(`CREATE TABLE %[1]s.parent (id int PRIMARY KEY);
-CREATE TABLE %[1]s.orders (id bigint PRIMARY KEY, parent_id int REFERENCES %[1]s.parent (id), code varchar(20) UNIQUE, CONSTRAINT positive CHECK (id > 0));
+CREATE TABLE %[1]s.orders (id bigint PRIMARY KEY, parent_id int REFERENCES %[1]s.parent (id), code varchar(20) UNIQUE, area box, CONSTRAINT positive CHECK (id > 0), EXCLUDE USING gist (area WITH &&));
 CREATE VIEW %[1]s.recent AS SELECT id FROM %[1]s.orders;
 CREATE SEQUENCE %[1]s.ticket START 5`, schema))
 	role, password := unique("mcp_none_"), unique("Pw-")
@@ -237,6 +237,7 @@ CREATE SEQUENCE %[1]s.ticket START 5`, schema))
 			`["orders_parent_id_fkey","FOREIGN KEY","parent_id"]`,
 			`["orders_code_key","UNIQUE","code"]`,
 			`["positive","CHECK","id"]`,
+			`["orders_area_excl","EXCLUDE","area"]`,
 		}},
 		{"get_object_details", objectInput{SchemaName: schema, ObjectName: "ticket", ObjectType: "sequence"}, []string{`["` + schema + `","ticket","bigint","5","1"]`}},
 	}
