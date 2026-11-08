@@ -17,45 +17,60 @@ import (
 )
 
 const (
-	schemasQuery db.Query = `SELECT schema_name, schema_owner,
+	schemasQuery db.Query = `SELECT n.nspname AS schema_name, pg_catalog.pg_get_userbyid(n.nspowner) AS schema_owner,
        CASE
-           WHEN schema_name = 'multigres' THEN 'Multigres Internal Schema'
-           WHEN schema_name LIKE 'pg_%' THEN 'System Schema'
-           WHEN schema_name = 'information_schema' THEN 'System Information Schema'
+           WHEN n.nspname = 'multigres' THEN 'Multigres Internal Schema'
+           WHEN n.nspname LIKE 'pg_%' THEN 'System Schema'
+           WHEN n.nspname = 'information_schema' THEN 'System Information Schema'
            ELSE 'User Schema'
        END AS schema_type
-FROM information_schema.schemata
+FROM pg_catalog.pg_namespace n
 ORDER BY schema_type, schema_name`
-	tablesQuery db.Query = `SELECT table_schema, table_name, table_type
-FROM information_schema.tables
-WHERE table_schema = $1 AND table_type = $2
+	tablesQuery db.Query = `SELECT n.nspname AS table_schema, c.relname AS table_name, k.table_type
+FROM pg_catalog.pg_class c
+JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+CROSS JOIN LATERAL (SELECT CASE WHEN c.relkind IN ('r', 'p') THEN 'BASE TABLE' WHEN c.relkind = 'v' THEN 'VIEW' END AS table_type) k
+WHERE n.nspname = $1 AND k.table_type = $2
 ORDER BY table_name`
-	sequencesQuery db.Query = `SELECT sequence_schema, sequence_name, data_type
-FROM information_schema.sequences
-WHERE sequence_schema = $1
+	sequencesQuery db.Query = `SELECT n.nspname AS sequence_schema, c.relname AS sequence_name, pg_catalog.format_type(s.seqtypid, NULL) AS data_type
+FROM pg_catalog.pg_sequence s
+JOIN pg_catalog.pg_class c ON c.oid = s.seqrelid
+JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = $1
 ORDER BY sequence_name`
 	extensionsQuery db.Query = `SELECT extname, extversion, extrelocatable
 FROM pg_catalog.pg_extension
 ORDER BY extname`
-	columnsQuery db.Query = `SELECT column_name, data_type, is_nullable, column_default
-FROM information_schema.columns
-WHERE table_schema = $1 AND table_name = $2
-ORDER BY ordinal_position`
-	constraintsQuery db.Query = `SELECT tc.constraint_name, tc.constraint_type, kcu.column_name
-FROM information_schema.table_constraints AS tc
-LEFT JOIN information_schema.key_column_usage AS kcu
-  ON tc.constraint_name = kcu.constraint_name
- AND tc.table_schema = kcu.table_schema
- AND tc.table_name = kcu.table_name
-WHERE tc.table_schema = $1 AND tc.table_name = $2
-ORDER BY tc.constraint_name, kcu.ordinal_position`
+	columnsQuery db.Query = `SELECT a.attname AS column_name, pg_catalog.format_type(a.atttypid, a.atttypmod) AS data_type,
+       CASE WHEN a.attnotnull OR (t.typtype = 'd' AND t.typnotnull) THEN 'NO' ELSE 'YES' END AS is_nullable,
+       CASE WHEN a.attgenerated = '' THEN pg_catalog.pg_get_expr(d.adbin, d.adrelid) END AS column_default
+FROM pg_catalog.pg_attribute a
+JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
+JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+JOIN pg_catalog.pg_type t ON t.oid = a.atttypid
+LEFT JOIN pg_catalog.pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
+WHERE n.nspname = $1 AND c.relname = $2 AND c.relkind IN ('r', 'p', 'v', 'f') AND a.attnum > 0 AND NOT a.attisdropped
+ORDER BY a.attnum`
+	constraintsQuery db.Query = `SELECT con.conname AS constraint_name,
+       CASE con.contype WHEN 'p' THEN 'PRIMARY KEY' WHEN 'f' THEN 'FOREIGN KEY' WHEN 'u' THEN 'UNIQUE' WHEN 'c' THEN 'CHECK' WHEN 'x' THEN 'EXCLUDE' END AS constraint_type,
+       a.attname AS column_name
+FROM pg_catalog.pg_constraint con
+JOIN pg_catalog.pg_class c ON c.oid = con.conrelid
+JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+LEFT JOIN LATERAL pg_catalog.unnest(con.conkey) WITH ORDINALITY AS k(attnum, position) ON true
+LEFT JOIN pg_catalog.pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = k.attnum
+WHERE n.nspname = $1 AND c.relname = $2 AND con.contype IN ('p', 'f', 'u', 'c', 'x')
+ORDER BY constraint_name, k.position`
 	indexesQuery db.Query = `SELECT indexname, indexdef
 FROM pg_catalog.pg_indexes
 WHERE schemaname = $1 AND tablename = $2
 ORDER BY indexname`
-	sequenceQuery db.Query = `SELECT sequence_schema, sequence_name, data_type, start_value, increment
-FROM information_schema.sequences
-WHERE sequence_schema = $1 AND sequence_name = $2`
+	sequenceQuery db.Query = `SELECT n.nspname AS sequence_schema, c.relname AS sequence_name, pg_catalog.format_type(s.seqtypid, NULL) AS data_type,
+       s.seqstart::pg_catalog.text AS start_value, s.seqincrement::pg_catalog.text AS increment
+FROM pg_catalog.pg_sequence s
+JOIN pg_catalog.pg_class c ON c.oid = s.seqrelid
+JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = $1 AND c.relname = $2`
 	extensionQuery db.Query = `SELECT extname, extversion, extrelocatable
 FROM pg_catalog.pg_extension
 WHERE extname = $1`

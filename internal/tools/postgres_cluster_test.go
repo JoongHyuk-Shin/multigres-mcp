@@ -207,6 +207,55 @@ func TestOrdinaryRoleEndsItsOwnSession(t *testing.T) {
 	}
 }
 
+func TestCatalogToolsShowTheWholeSchemaToARoleWithoutPrivileges(t *testing.T) {
+	schema := testenv.Schema(t, "catalogrole")
+	setup := gateway(t)
+	testenv.Exec(t, setup, fmt.Sprintf(`CREATE TABLE %[1]s.parent (id int PRIMARY KEY);
+CREATE TABLE %[1]s.orders (id bigint PRIMARY KEY, parent_id int REFERENCES %[1]s.parent (id), code varchar(20) UNIQUE, CONSTRAINT positive CHECK (id > 0));
+CREATE VIEW %[1]s.recent AS SELECT id FROM %[1]s.orders;
+CREATE SEQUENCE %[1]s.ticket START 5`, schema))
+	role, password := unique("mcp_none_"), unique("Pw-")
+	testenv.Exec(t, setup, fmt.Sprintf("CREATE ROLE %s LOGIN PASSWORD '%s'", role, password))
+	t.Cleanup(func() { testenv.Exec(t, gateway(t), "DROP ROLE "+role) })
+	owner := newHarness(t, clusterConfig(config.Restricted))
+	cfg := clusterConfig(config.Restricted)
+	cfg.DatabaseURL = gatewayURLAs(role, password, 15432)
+	unprivileged := newHarness(t, cfg)
+
+	calls := []struct {
+		name string
+		args any
+		want []string
+	}{
+		{"list_schemas", noInput{}, []string{`["` + schema + `","postgres","User Schema"]`}},
+		{"list_objects", objectsInput{SchemaName: schema}, []string{`["` + schema + `","orders","BASE TABLE"]`}},
+		{"list_objects", objectsInput{SchemaName: schema, ObjectType: "view"}, []string{`["` + schema + `","recent","VIEW"]`}},
+		{"list_objects", objectsInput{SchemaName: schema, ObjectType: "sequence"}, []string{`["` + schema + `","ticket","bigint"]`}},
+		{"get_object_details", objectInput{SchemaName: schema, ObjectName: "orders"}, []string{
+			`["code","character varying(20)","YES",null]`,
+			`["orders_pkey","PRIMARY KEY","id"]`,
+			`["orders_parent_id_fkey","FOREIGN KEY","parent_id"]`,
+			`["orders_code_key","UNIQUE","code"]`,
+			`["positive","CHECK","id"]`,
+		}},
+		{"get_object_details", objectInput{SchemaName: schema, ObjectName: "ticket", ObjectType: "sequence"}, []string{`["` + schema + `","ticket","bigint","5","1"]`}},
+	}
+	for _, c := range calls {
+		seen, shown := resultBody(owner.mustCall(c.name, c.args)), resultBody(unprivileged.mustCall(c.name, c.args))
+		if shown != seen {
+			t.Fatalf("%s %+v shows a role without privileges something else.\nowner:\n%s\nrole without privileges:\n%s", c.name, c.args, seen, shown)
+		}
+		mustContain(t, seen, c.want...)
+	}
+}
+
+func resultBody(text string) string {
+	if end := strings.Index(text, "answered_by: "); end >= 0 {
+		return text[:end]
+	}
+	return text
+}
+
 func TestExecuteSQLClearsHypopgStateFromViews(t *testing.T) {
 	schema := ordersSchema(t, "toolhypoview")
 	testenv.Exec(t, gateway(t), fmt.Sprintf(`CREATE FUNCTION %[1]s.mk() RETURNS oid LANGUAGE sql AS $$ SELECT indexrelid FROM public.hypopg_create_index('CREATE INDEX ON %[1]s.orders (customer_id)') $$;
