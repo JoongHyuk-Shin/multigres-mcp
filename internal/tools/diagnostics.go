@@ -21,6 +21,8 @@ import (
 
 const (
 	defaultTopLimit = 10
+	topPreview      = 2000
+	diagnosePreview = 500
 	maxGivenQueries = 10
 	diagLogBytes    = 64 * 1024
 	diagLogLines    = 5
@@ -89,7 +91,7 @@ func (d *Deps) topQueries(ctx context.Context, in topQueriesInput, out *output) 
 	if source != "gateway" {
 		err := d.onTarget(ctx, out, in.Node, d.readPlan(), func(ctx context.Context, tx *db.Tx, answeredBy string) error {
 			diag.Period(ctx, tx, out, answeredBy, describe)
-			return diag.TopStatements(ctx, tx, out, sortBy, limit)
+			return diag.TopStatements(ctx, tx, out, sortBy, limit, topPreview)
 		})
 		if err != nil {
 			out.Line("pg_stat_statements: %s", describe(err))
@@ -188,7 +190,7 @@ func (d *Deps) gatewayTop(ctx context.Context, sink diag.Sink, sortBy string, li
 	}
 	rows = rows[:min(limit, len(rows))]
 	sink.JSON(fmt.Sprintf("gateway query statistics, %d queries with the highest %s time across all gateways", len(rows), key), rows)
-	sink.Line("normalized_sql may have been cut by the gateway without a mark (--query-metrics-sql-max-bytes, default 4096); do not pass it to explain_query or the index advisors; use the pg_stat_statements text or the full statement instead")
+	sink.Line("normalized_sql may have been cut by the gateway without a mark (--query-metrics-sql-max-bytes, default 4096); do not pass it to explain_query or the index advisors; use the full pg_stat_statements text (read by queryid when query_length is longer than query) or the full statement instead")
 	return nil
 }
 
@@ -217,7 +219,7 @@ func (d *Deps) diagnose(ctx context.Context, in diagnoseInput, out *output) erro
 	}
 	callbacks := diag.Callbacks{
 		SlowQueries: func(ctx context.Context, tx *db.Tx, sink diag.Sink) error {
-			statementsErr := diag.TopStatements(ctx, tx, sink, "resources", defaultTopLimit)
+			statementsErr := diag.TopStatements(ctx, tx, sink, "resources", defaultTopLimit, diagnosePreview)
 			gatewayErr := d.gatewayTop(ctx, sink, "total_time", defaultTopLimit)
 			if statementsErr != nil && gatewayErr != nil {
 				return errors.Join(fmt.Errorf("pg_stat_statements: %w", statementsErr), fmt.Errorf("gateway query statistics: %w", gatewayErr))

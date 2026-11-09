@@ -47,8 +47,8 @@ LIMIT 20`
 FROM pg_catalog.pg_stat_progress_vacuum p`
 
 	locksQuery db.Query = `SELECT w.pid AS waiting_pid, w.application_name AS waiting_application, w.wait_event_type, w.wait_event,
-       (pg_catalog.now() - w.query_start)::text AS waiting_for, w.query AS waiting_query,
-       b.pid AS blocking_pid, b.application_name AS blocking_application, b.state AS blocking_state, b.query AS blocking_query
+       (pg_catalog.now() - w.query_start)::text AS waiting_for, pg_catalog.left(w.query, 500) AS waiting_query,
+       b.pid AS blocking_pid, b.application_name AS blocking_application, b.state AS blocking_state, pg_catalog.left(b.query, 500) AS blocking_query
 FROM pg_catalog.pg_stat_activity w
 CROSS JOIN LATERAL pg_catalog.unnest(pg_catalog.pg_blocking_pids(w.pid)) AS blocker(pid)
 JOIN pg_catalog.pg_stat_activity b ON b.pid = blocker.pid
