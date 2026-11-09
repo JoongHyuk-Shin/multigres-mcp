@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "multigres-mcp",
   "display_name": "Multigres",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Postgres diagnostics and cluster operations for Multigres clusters.",
   "long_description": "Postgres diagnostics (schemas and objects, read-only SQL, query plans with hypothetical indexes, top queries, index advice, health checks) and cluster tools: cluster status and backups through multiadmin, node logs over a direct connection to each node, and in the unrestricted mode primary switchover and backup control. Read-only by default.",
   "author": {
