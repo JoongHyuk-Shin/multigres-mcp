@@ -7,7 +7,7 @@ An MCP server for [Multigres](https://github.com/multigres/multigres) clusters. 
 
 The server is read-only by default. Write tools are registered only in the unrestricted mode.
 
-It has been tested against a local Multigres Docker cluster built from commit `49e7a2f7d4fe` (2026-11-02, PostgreSQL 17.7, two cells) on Linux with Docker Engine. Other setups have not been tested.
+It has been tested against a local Multigres Docker cluster built from commit `5fa0f2955ede` (2026-11-10, PostgreSQL 17.7, two cells) on Linux with Docker Engine. Other setups have not been tested.
 
 ## Install
 
@@ -147,7 +147,7 @@ Start the cluster from a Multigres checkout:
 ```sh
 git clone https://github.com/multigres/multigres
 cd multigres
-git checkout 49e7a2f7d4fe
+git checkout 5fa0f2955ede
 MULTIGRES_PG_EXTRA_CONF="shared_preload_libraries = 'pg_stat_statements'" docker compose up -d --build
 ```
 

@@ -6,7 +6,7 @@ require (
 	connectrpc.com/connect v1.20.0
 	github.com/jackc/pgx/v5 v5.12.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
-	github.com/multigres/multigres v0.0.0-20261102175712-49e7a2f7d4fe
+	github.com/multigres/multigres v0.0.0-20261110153352-5fa0f2955ede
 	google.golang.org/protobuf v1.36.11
 )
 

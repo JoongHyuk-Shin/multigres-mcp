@@ -307,3 +307,17 @@ ANALYZE %[1]s.orders`, schema))
 	}})
 	mustContain(t, text, `USING btree (\"customer_id\")`, "tags", "no default operator class", cleanEnd)
 }
+
+func TestIndexAdvisorReadsDatabaseQualifiedNames(t *testing.T) {
+	schema := ordersSchema(t, "dbname")
+	setup := gateway(t)
+	var database string
+	if err := setup.QueryRow(context.Background(), "SELECT current_database()").Scan(&database); err != nil {
+		t.Fatal(err)
+	}
+	h := newHarness(t, clusterConfig(config.Restricted))
+	text := h.mustCall("analyze_query_indexes", queryIndexesInput{Queries: []string{
+		fmt.Sprintf("SELECT * FROM %s.%s.orders WHERE customer_id = 5", database, schema),
+	}})
+	mustContain(t, text, "skipped: 0", fmt.Sprintf(`CREATE INDEX ON \"%s\".\"orders\" USING btree (\"customer_id\")`, schema))
+}

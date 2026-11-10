@@ -2,7 +2,7 @@
 
 Before writing this server, its behaviour was measured on a local Multigres Docker cluster (commit 49e7a2f7, two cells, `pg_stat_statements` preloaded and `hypopg` installed). The design leans on those observations. This table maps each one to the test that would turn red if Multigres changed it, or says why no test can reach it.
 
-Tests tagged `cluster` need that cluster; see the README.
+Tests tagged `cluster` need a cluster set up the same way; the README gives the commit they now run against and the steps.
 
 ## Postgres tools through the gateway
 

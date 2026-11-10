@@ -60,6 +60,8 @@ func TestCollectColumnsFindsEveryConditionClause(t *testing.T) {
 		{"order by output alias", "SELECT lower(name) AS n FROM users ORDER BY n", []string{"name@users"}},
 		{"group by", "SELECT region, count(*) FROM sales GROUP BY region", []string{"region@sales"}},
 		{"schema qualified", "SELECT * FROM app.users WHERE app.users.email = 'x'", []string{"email@app.users"}},
+		{"database qualified", "SELECT * FROM appdb.app.users WHERE email = 'x'", []string{"email@app.users"}},
+		{"database qualified using", "SELECT * FROM appdb.app.a JOIN appdb.app.b USING (k)", []string{"k@app.a,app.b"}},
 		{"correlated subquery reaches the outer level", "SELECT * FROM orders o WHERE EXISTS (SELECT 1 FROM items i WHERE i.order_id = o.id AND sku = 'x')", []string{"order_id@items", "id@orders", "sku@items|orders"}},
 		{"cte name is not a table", "WITH recent AS (SELECT * FROM orders WHERE created > now()) SELECT * FROM recent WHERE recent.total > 1", []string{"created@orders"}},
 		{"from subquery", "SELECT * FROM (SELECT * FROM orders WHERE status = 'x') s WHERE s.total > 1", []string{"status@orders"}},
