@@ -24,6 +24,8 @@ const (
 	topPreview      = 2000
 	diagnosePreview = 500
 	advisorPreview  = 200
+	reasonPreview   = 500
+	reasonCutMark   = " [cut]"
 	maxGivenQueries = 10
 	diagLogBytes    = 64 * 1024
 	diagLogLines    = 5
@@ -364,7 +366,7 @@ func writeRecommendations(out *output, analysis *advisor.Analysis) {
 	if len(analysis.Skipped) > 0 {
 		skipped := make([]skippedQuery, len(analysis.Skipped))
 		for i, s := range analysis.Skipped {
-			skipped[i] = skippedQuery{shownQuery: shown(s.Query), Reason: s.Reason}
+			skipped[i] = skippedQuery{shownQuery: shown(s.Query), Reason: shownReason(s.Reason)}
 		}
 		out.JSON("skipped queries", skipped)
 	}
@@ -398,4 +400,12 @@ func writeRecommendations(out *output, analysis *advisor.Analysis) {
 func shown(query advisor.Query) shownQuery {
 	runes := []rune(query.Text)
 	return shownQuery{Query: string(runes[:min(len(runes), advisorPreview)]), QueryLength: len(runes), QueryID: query.QueryID}
+}
+
+func shownReason(reason string) string {
+	runes := []rune(reason)
+	if len(runes) <= reasonPreview {
+		return reason
+	}
+	return string(runes[:reasonPreview]) + reasonCutMark
 }

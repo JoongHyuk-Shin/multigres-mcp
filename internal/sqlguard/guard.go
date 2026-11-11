@@ -193,16 +193,21 @@ func (w *readWalk) checkFunction(call *ast.FuncCall) error {
 }
 
 func functionName(call *ast.FuncCall) (string, string, error) {
-	if call.Funcname == nil || len(call.Funcname.Items) == 0 || len(call.Funcname.Items) > 2 {
-		return "", "", fmt.Errorf("function name %s is not allowed", call.SqlString())
+	if call.Funcname == nil || len(call.Funcname.Items) == 0 {
+		return "", "", errors.New("a function call without a name is not allowed")
 	}
 	parts := make([]string, len(call.Funcname.Items))
+	plain := true
 	for i, item := range call.Funcname.Items {
 		part, ok := item.(*ast.String)
 		if !ok {
-			return "", "", fmt.Errorf("function name %s is not allowed", call.SqlString())
+			parts[i], plain = item.SqlString(), false
+			continue
 		}
 		parts[i] = part.SVal
+	}
+	if !plain || len(parts) > 2 {
+		return "", "", fmt.Errorf("function name %s is not allowed", strings.Join(parts, "."))
 	}
 	if len(parts) == 1 {
 		return "", parts[0], nil

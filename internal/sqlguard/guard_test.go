@@ -119,6 +119,17 @@ func TestCheckReadRejects(t *testing.T) {
 	}
 }
 
+func TestRejectedFunctionNameIsNamedWithoutItsArguments(t *testing.T) {
+	elements := make([]string, 12000)
+	for i := range elements {
+		elements[i] = "0"
+	}
+	_, err := CheckRead("SELECT postgres.pg_catalog.array_length(ARRAY[" + strings.Join(elements, ", ") + "], 1)")
+	if err == nil || err.Error() != "function name postgres.pg_catalog.array_length is not allowed" {
+		t.Fatalf("got %v", err)
+	}
+}
+
 func TestCheckedReportsUnqualifiedFunctionsAndPlaceholders(t *testing.T) {
 	checked, err := CheckRead("SELECT lower(a), pg_catalog.upper(b), abs($1) FROM t WHERE c = $2")
 	if err != nil {

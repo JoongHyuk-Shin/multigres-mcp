@@ -354,9 +354,16 @@ CREATE TRIGGER slow AFTER INSERT ON %[1]s.sink FOR EACH STATEMENT EXECUTE FUNCTI
 	insertText, insertID := stored("INSERT INTO " + schema + ".sink")
 	joinText, joinID := stored("SELECT count(*) /* 긴 주석")
 
+	badLiteral := fmt.Sprintf("SELECT * FROM %s.orders WHERE id = '%s%s'", schema, strings.Repeat("값", 100), strings.Repeat("a", 30000))
+	elements := make([]string, 12000)
+	for i := range elements {
+		elements[i] = strconv.Itoa(i)
+	}
+	threePartName := fmt.Sprintf("SELECT postgres.pg_catalog.array_length(ARRAY[%s], 1) FROM %s.orders", strings.Join(elements, ", "), schema)
+
 	h := newHarness(t, clusterConfig(config.Restricted))
 	workload := h.mustCall("analyze_workload_indexes", workloadIndexesInput{})
-	given := h.mustCall("analyze_query_indexes", queryIndexesInput{Queries: []string{join}})
+	given := h.mustCall("analyze_query_indexes", queryIndexesInput{Queries: []string{join, badLiteral, threePartName}})
 	for _, result := range []struct{ name, text string }{{"analyze_workload_indexes", workload}, {"analyze_query_indexes", given}} {
 		if strings.Contains(result.text, "[result truncated") {
 			t.Fatalf("one long query filled the %s result:\n%.3000s", result.name, result.text)
@@ -380,6 +387,16 @@ CREATE TRIGGER slow AFTER INSERT ON %[1]s.sink FOR EACH STATEMENT EXECUTE FUNCTI
 	costs := "plan total cost per query, before and after all recommended indexes"
 	shows("workload query cost", listedRow(t, workload, costs, joinText[:20]), joinText, joinID)
 	shows("given query cost", listedRow(t, given, costs, join[:20]), join, 0)
+	failed := listedRow(t, given, "skipped queries", badLiteral[:60])
+	shows("skipped given query", failed, badLiteral, 0)
+	reason := failed["reason"].(string)
+	if runes := []rune(reason); !strings.HasPrefix(reason, "EXPLAIN failed: invalid input syntax") || len(runes) != reasonPreview+len([]rune(reasonCutMark)) || string(runes[reasonPreview:]) != reasonCutMark || strings.ContainsRune(reason, '\uFFFD') {
+		t.Fatalf("a Postgres error that repeats a long value is shown as %d characters, want its first %d characters and %q:\n%.700s", len(runes), reasonPreview, reasonCutMark, reason)
+	}
+	rejected := listedRow(t, given, "skipped queries", threePartName[:40])
+	if reason := rejected["reason"]; reason != "did not pass the read check: function name postgres.pg_catalog.array_length is not allowed" {
+		t.Fatalf("the read check names a rejected function as %.300q", reason)
+	}
 
 	guide := regexp.MustCompile(`SELECT substr\(query, 1, (\d+)\) FROM \S+ WHERE queryid = <queryid> LIMIT 1`).FindStringSubmatch(workload)
 	if guide == nil {
