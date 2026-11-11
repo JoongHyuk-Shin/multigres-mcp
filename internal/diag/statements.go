@@ -60,8 +60,7 @@ func TopStatements(ctx context.Context, tx *db.Tx, sink Sink, sortBy string, lim
 	if schema == "" {
 		return ErrNoStatements
 	}
-	sink.Line("query is the first %d characters of each statement and query_length its full length; read a longer one with execute_sql in pieces of %d characters: SELECT substr(query, 1, %d) FROM %s.pg_stat_statements WHERE queryid = <queryid> LIMIT 1, then substr(query, %d, %d) and so on",
-		preview, textPiece, textPiece, pgx.Identifier{schema}.Sanitize(), textPiece+1, textPiece)
+	FullTextGuide(sink, preview, schema)
 	switch sortBy {
 	case "total_time":
 		_, err = show(ctx, tx, sink, fmt.Sprintf("pg_stat_statements, %d queries with the most total time", limit), withSchema(topTotalTemplate, schema), limit, preview)
@@ -71,4 +70,9 @@ func TopStatements(ctx context.Context, tx *db.Tx, sink Sink, sortBy string, lim
 		_, err = show(ctx, tx, sink, "pg_stat_statements, queries using more than 5% of any resource (time, blocks accessed, read, dirtied, WAL bytes; postgres-mcp threshold)", withSchema(topResourcesTemplate, schema), resourceFraction, preview)
 	}
 	return err
+}
+
+func FullTextGuide(sink Sink, preview int, schema string) {
+	sink.Line("query is the first %d characters of each statement and query_length its full length; read a longer one with execute_sql in pieces of %d characters: SELECT substr(query, 1, %d) FROM %s.pg_stat_statements WHERE queryid = <queryid> LIMIT 1, then substr(query, %d, %d) and so on",
+		preview, textPiece, textPiece, pgx.Identifier{schema}.Sanitize(), textPiece+1, textPiece)
 }

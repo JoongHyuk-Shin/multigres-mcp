@@ -23,6 +23,7 @@ const (
 	defaultTopLimit = 10
 	topPreview      = 2000
 	diagnosePreview = 500
+	advisorPreview  = 200
 	maxGivenQueries = 10
 	diagLogBytes    = 64 * 1024
 	diagLogLines    = 5
@@ -73,6 +74,23 @@ type recommendation struct {
 	CostAfter    float64  `json:"workload_cost_after"`
 	CostAlone    float64  `json:"workload_cost_with_only_this_index"`
 	LongTextNote string   `json:"note,omitempty"`
+}
+
+type shownQuery struct {
+	Query       string `json:"query"`
+	QueryLength int    `json:"query_length"`
+	QueryID     int64  `json:"queryid,omitempty"`
+}
+
+type skippedQuery struct {
+	shownQuery
+	Reason string `json:"reason"`
+}
+
+type queryCost struct {
+	shownQuery
+	CostBefore float64 `json:"cost_before"`
+	CostAfter  float64 `json:"cost_after"`
 }
 
 func registerDiagnostics(server *mcp.Server, d *Deps) {
@@ -319,6 +337,7 @@ func workloadQueries(ctx context.Context, tx *db.Tx, out *output, given []string
 			queries[i] = advisor.Query{Text: text, Weight: 1}
 		}
 		out.Line("workload: %d given queries, each with weight 1", len(given))
+		out.Line("query is the first %d characters of each query and query_length its full length", advisorPreview)
 		return queries, nil
 	}
 	schema, err := diag.ExtensionSchema(ctx, tx, "pg_stat_statements")
@@ -333,6 +352,7 @@ func workloadQueries(ctx context.Context, tx *db.Tx, out *output, given []string
 		return nil, err
 	}
 	out.Line("workload: %d queries of this database from pg_stat_statements (at least 50 calls and 5 ms mean, most total time first, up to 100; postgres-mcp defaults), weight = calls x mean ms", len(queries))
+	diag.FullTextGuide(out, advisorPreview, schema)
 	return queries, nil
 }
 
@@ -342,7 +362,11 @@ func writeRecommendations(out *output, analysis *advisor.Analysis) {
 		out.JSON("tables without planner statistics in pg_stats (their costs use planner defaults; ANALYZE them on the primary)", analysis.NoStatistics)
 	}
 	if len(analysis.Skipped) > 0 {
-		out.JSON("skipped queries", analysis.Skipped)
+		skipped := make([]skippedQuery, len(analysis.Skipped))
+		for i, s := range analysis.Skipped {
+			skipped[i] = skippedQuery{shownQuery: shown(s.Query), Reason: s.Reason}
+		}
+		out.JSON("skipped queries", skipped)
 	}
 	if len(analysis.NotIndexable) > 0 {
 		out.JSON("candidate indexes left out because Postgres cannot build them with btree", analysis.NotIndexable)
@@ -363,6 +387,15 @@ func writeRecommendations(out *output, analysis *advisor.Analysis) {
 		out.JSON("recommended indexes, in the order the search chose them (sizes are hypopg estimates, close to a btree without deduplication; on a column with many repeated values the real btree can be several times smaller)", recommendations)
 	}
 	out.Line("workload cost (average over queries of plan total cost x weight): %.2f before, %.2f after", analysis.BaseCost, analysis.FinalCost)
-	out.JSON("plan total cost per query, before and after all recommended indexes", analysis.Queries)
+	costs := make([]queryCost, len(analysis.Queries))
+	for i, q := range analysis.Queries {
+		costs[i] = queryCost{shownQuery: shown(q.Query), CostBefore: q.Before, CostAfter: q.After}
+	}
+	out.JSON("plan total cost per query, before and after all recommended indexes", costs)
 	out.Line("costs are planner estimates; a query with $n placeholders uses a generic plan, whose cost can differ from the plan for real values")
+}
+
+func shown(query advisor.Query) shownQuery {
+	runes := []rune(query.Text)
+	return shownQuery{Query: string(runes[:min(len(runes), advisorPreview)]), QueryLength: len(runes), QueryID: query.QueryID}
 }

@@ -31,8 +31,9 @@ const (
 )
 
 type Query struct {
-	Text   string
-	Weight float64
+	Text    string
+	Weight  float64
+	QueryID int64
 }
 
 type Options struct {
@@ -41,8 +42,8 @@ type Options struct {
 }
 
 type Skipped struct {
-	Query  string `json:"query"`
-	Reason string `json:"reason"`
+	Query  Query
+	Reason string
 }
 
 type NotIndexable struct {
@@ -62,9 +63,9 @@ type Recommendation struct {
 }
 
 type QueryCost struct {
-	Query  string  `json:"query"`
-	Before float64 `json:"cost_before"`
-	After  float64 `json:"cost_after"`
+	Query  Query
+	Before float64
+	After  float64
 }
 
 type Analysis struct {
@@ -147,7 +148,7 @@ func parseWorkload(queries []Query, analysis *Analysis) []*workloadQuery {
 	for _, query := range queries {
 		item, reason := parseQuery(query)
 		if reason != "" {
-			analysis.Skipped = append(analysis.Skipped, Skipped{Query: query.Text, Reason: reason})
+			analysis.Skipped = append(analysis.Skipped, Skipped{Query: query, Reason: reason})
 			continue
 		}
 		parsed = append(parsed, item)
@@ -200,7 +201,7 @@ func keepUserTables(queries []*workloadQuery, tables map[relation]table, analysi
 			ordinary = ordinary || tables[rel].ordinary
 		}
 		if !ordinary {
-			analysis.Skipped = append(analysis.Skipped, Skipped{Query: query.Text, Reason: "reads no ordinary user table"})
+			analysis.Skipped = append(analysis.Skipped, Skipped{Query: query.Query, Reason: "reads no ordinary user table"})
 			continue
 		}
 		kept = append(kept, query)
@@ -267,7 +268,7 @@ func (s *session) baseline(ctx context.Context, queries []*workloadQuery, analys
 			return nil, ctx.Err()
 		}
 		if err != nil {
-			analysis.Skipped = append(analysis.Skipped, Skipped{Query: query.Text, Reason: "EXPLAIN failed: " + describe(err)})
+			analysis.Skipped = append(analysis.Skipped, Skipped{Query: query.Query, Reason: "EXPLAIN failed: " + describe(err)})
 			continue
 		}
 		s.queries = append(s.queries, query)
@@ -582,7 +583,7 @@ func (s *session) report(ctx context.Context, analysis *Analysis, before []float
 		return err
 	}
 	for i, query := range s.queries {
-		analysis.Queries = append(analysis.Queries, QueryCost{Query: query.Text, Before: before[i], After: final[i]})
+		analysis.Queries = append(analysis.Queries, QueryCost{Query: query.Query, Before: before[i], After: final[i]})
 	}
 	return s.tx.ResetHypothetical(ctx)
 }

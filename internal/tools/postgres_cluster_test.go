@@ -4,6 +4,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -320,4 +321,100 @@ func TestIndexAdvisorReadsDatabaseQualifiedNames(t *testing.T) {
 		fmt.Sprintf("SELECT * FROM %s.%s.orders WHERE customer_id = 5", database, schema),
 	}})
 	mustContain(t, text, "skipped: 0", fmt.Sprintf(`CREATE INDEX ON \"%s\".\"orders\" USING btree (\"customer_id\")`, schema))
+}
+
+func TestIndexAdvisorsShowTheStartOfLongQueries(t *testing.T) {
+	schema := ordersSchema(t, "longadvice")
+	setup := gateway(t)
+	testenv.Exec(t, setup, fmt.Sprintf(`CREATE TABLE %[1]s.sink (v int);
+CREATE FUNCTION %[1]s.slow() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_sleep(0.006); RETURN NULL; END $$;
+CREATE TRIGGER slow AFTER INSERT ON %[1]s.sink FOR EACH STATEMENT EXECUTE FUNCTION %[1]s.slow()`, schema))
+	values := make([]string, 8000)
+	for i := range values {
+		values[i] = fmt.Sprintf("(%d)", i)
+	}
+	insert := fmt.Sprintf("INSERT INTO %s.sink VALUES %s", schema, strings.Join(values, ", "))
+	join := fmt.Sprintf("SELECT count(*) /* %s */ FROM %[2]s.orders a JOIN %[2]s.orders b ON a.customer_id = b.customer_id WHERE a.status = 'open'",
+		strings.Repeat("긴 주석으로 문장을 길게 만든다 ", 3000), schema)
+	node := primary(t)
+	testenv.Exec(t, node, "SELECT pg_stat_statements_reset()")
+	for i := 0; i < 55; i++ {
+		testenv.Exec(t, node, insert)
+		testenv.Count(t, node, join)
+	}
+	stored := func(start string) (string, int64) {
+		t.Helper()
+		var text string
+		var queryid int64
+		if err := setup.QueryRow(context.Background(), "SELECT query, queryid FROM pg_stat_statements WHERE starts_with(query, $1) LIMIT 1", start).Scan(&text, &queryid); err != nil {
+			t.Fatalf("pg_stat_statements has no statement starting with %q: %v", start, err)
+		}
+		return text, queryid
+	}
+	insertText, insertID := stored("INSERT INTO " + schema + ".sink")
+	joinText, joinID := stored("SELECT count(*) /* 긴 주석")
+
+	h := newHarness(t, clusterConfig(config.Restricted))
+	workload := h.mustCall("analyze_workload_indexes", workloadIndexesInput{})
+	given := h.mustCall("analyze_query_indexes", queryIndexesInput{Queries: []string{join}})
+	for _, result := range []struct{ name, text string }{{"analyze_workload_indexes", workload}, {"analyze_query_indexes", given}} {
+		if strings.Contains(result.text, "[result truncated") {
+			t.Fatalf("one long query filled the %s result:\n%.3000s", result.name, result.text)
+		}
+		mustContain(t, result.text, fmt.Sprintf("query is the first %d characters of each ", advisorPreview), "workload cost (average over queries", "costs are planner estimates")
+	}
+	shows := func(name string, row map[string]any, text string, queryid int64) {
+		t.Helper()
+		runes := []rune(text)
+		if query := row["query"]; query != string(runes[:advisorPreview]) {
+			t.Fatalf("%s shows %q, want the first %d characters of the query", name, query, advisorPreview)
+		}
+		if length := fmt.Sprint(row["query_length"]); length != strconv.Itoa(len(runes)) {
+			t.Fatalf("%s gives query_length %s for a query of %d characters", name, length, len(runes))
+		}
+		if want := fmt.Sprint(queryid); queryid == 0 && row["queryid"] != nil || queryid != 0 && fmt.Sprint(row["queryid"]) != want {
+			t.Fatalf("%s gives queryid %v, want %d (0: none)", name, row["queryid"], queryid)
+		}
+	}
+	shows("skipped workload query", listedRow(t, workload, "skipped queries", insertText[:50]), insertText, insertID)
+	costs := "plan total cost per query, before and after all recommended indexes"
+	shows("workload query cost", listedRow(t, workload, costs, joinText[:20]), joinText, joinID)
+	shows("given query cost", listedRow(t, given, costs, join[:20]), join, 0)
+
+	guide := regexp.MustCompile(`SELECT substr\(query, 1, (\d+)\) FROM \S+ WHERE queryid = <queryid> LIMIT 1`).FindStringSubmatch(workload)
+	if guide == nil {
+		t.Fatalf("no instruction for reading the full text:\n%.3000s", workload)
+	}
+	if strings.Index(workload, guide[0]) > strings.Index(workload, "skipped queries:") {
+		t.Fatalf("the instruction comes after the query lists, so it is lost when they fill the result:\n%.3000s", workload)
+	}
+	piece, _ := strconv.Atoi(guide[1])
+	first := h.mustCall("execute_sql", sqlInput{SQL: strings.Replace(guide[0], "<queryid>", fmt.Sprint(insertID), 1)})
+	if strings.Contains(first, "[result truncated") || !strings.Contains(first, insertText[:min(piece, len(insertText))]) {
+		t.Fatalf("the instruction's first piece is not the first %d characters of the skipped query:\n%.2000s", piece, first)
+	}
+	if strings.Contains(given, "queryid = <queryid>") {
+		t.Fatalf("analyze_query_indexes points at pg_stat_statements for queries it was given:\n%.3000s", given)
+	}
+}
+
+func listedRow(t *testing.T, text, label, start string) map[string]any {
+	t.Helper()
+	at := strings.Index(text, label+":\n[")
+	if at < 0 {
+		t.Fatalf("no %q list:\n%.3000s", label, text)
+	}
+	decoder := json.NewDecoder(strings.NewReader(text[at+len(label)+2:]))
+	decoder.UseNumber()
+	var rows []map[string]any
+	if err := decoder.Decode(&rows); err != nil {
+		t.Fatalf("%s: %v\n%.3000s", label, err, text)
+	}
+	for _, row := range rows {
+		if query, _ := row["query"].(string); strings.HasPrefix(query, start) {
+			return row
+		}
+	}
+	t.Fatalf("no row of %q starts with %q:\n%.3000s", label, start, text)
+	return nil
 }

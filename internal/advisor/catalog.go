@@ -37,7 +37,7 @@ JOIN pg_catalog.pg_am am ON am.oid = ic.relam
 WHERE i.indrelid = ANY($1) AND i.indisvalid AND i.indpred IS NULL
   AND NOT (0 = ANY (i.indkey::pg_catalog.int2[]))`
 	tableSizeQuery   db.Query = "SELECT pg_catalog.pg_total_relation_size($1::pg_catalog.oid)"
-	workloadTemplate db.Query = `SELECT query, calls, total_exec_time / calls
+	workloadTemplate db.Query = `SELECT query, queryid, calls, total_exec_time / calls
 FROM %[1]s.pg_stat_statements
 WHERE dbid = (SELECT oid FROM pg_catalog.pg_database WHERE datname = pg_catalog.current_database())
   AND calls >= $1 AND total_exec_time / calls >= $2
@@ -77,12 +77,12 @@ func Workload(ctx context.Context, tx *db.Tx, schema string) ([]Query, error) {
 	var queries []Query
 	for rows.Next() {
 		var text string
-		var calls int64
+		var queryID, calls int64
 		var mean float64
-		if err := rows.Scan(&text, &calls, &mean); err != nil {
+		if err := rows.Scan(&text, &queryID, &calls, &mean); err != nil {
 			return nil, err
 		}
-		queries = append(queries, Query{Text: text, Weight: float64(calls) * mean})
+		queries = append(queries, Query{Text: text, Weight: float64(calls) * mean, QueryID: queryID})
 	}
 	return queries, rows.Err()
 }
