@@ -23,6 +23,7 @@ const (
 	defaultTopLimit = 10
 	topPreview      = 2000
 	diagnosePreview = 500
+	gatewayPreview  = 500
 	advisorPreview  = 200
 	reasonPreview   = 500
 	reasonCutMark   = " [cut]"
@@ -56,6 +57,7 @@ type diagnoseInput struct {
 
 type gatewayQuery struct {
 	Gateway       string  `json:"gateway"`
+	Fingerprint   string  `json:"fingerprint"`
 	NormalizedSQL string  `json:"normalized_sql"`
 	Calls         uint64  `json:"calls"`
 	Errors        uint64  `json:"errors"`
@@ -187,8 +189,9 @@ func (d *Deps) gatewayTop(ctx context.Context, sink diag.Sink, sortBy string, li
 		snapshot := answers[i].GetSnapshot()
 		sink.Line("gateway %s: %d fingerprints returned, %d tracked", name, len(snapshot.GetQueries()), snapshot.GetTrackedFingerprints())
 		for _, query := range snapshot.GetQueries() {
+			text := []rune(query.GetNormalizedSql())
 			rows = append(rows, gatewayQuery{
-				Gateway: name, NormalizedSQL: query.GetNormalizedSql(), Calls: query.GetCalls(), Errors: query.GetErrors(),
+				Gateway: name, Fingerprint: query.GetFingerprint(), NormalizedSQL: string(text[:min(len(text), gatewayPreview)]), Calls: query.GetCalls(), Errors: query.GetErrors(),
 				TotalMs: milliseconds(query.GetTotalDuration()), MeanMs: milliseconds(query.GetAverageDuration()),
 				P50Ms: milliseconds(query.GetP50Duration()), P99Ms: milliseconds(query.GetP99Duration()),
 				Rows: query.GetTotalRows(), LastSeen: query.GetLastSeen().AsTime().UTC().Format("2006-01-02T15:04:05Z"),
@@ -209,8 +212,8 @@ func (d *Deps) gatewayTop(ctx context.Context, sink diag.Sink, sortBy string, li
 		sink.Line("the resources ranking exists only in pg_stat_statements; gateway rows are ranked by total time")
 	}
 	rows = rows[:min(limit, len(rows))]
+	sink.Line("normalized_sql is the first %d characters of the text the gateway kept, which may have been cut by the gateway without a mark (--query-metrics-sql-max-bytes, default 4096 bytes); the gateway keeps no longer copy, and fingerprint tells apart rows that start alike; do not pass normalized_sql to explain_query or the index advisors; use the full pg_stat_statements text (read by queryid when query_length is longer than query) or the full statement instead", gatewayPreview)
 	sink.JSON(fmt.Sprintf("gateway query statistics, %d queries with the highest %s time across all gateways", len(rows), key), rows)
-	sink.Line("normalized_sql may have been cut by the gateway without a mark (--query-metrics-sql-max-bytes, default 4096); do not pass it to explain_query or the index advisors; use the full pg_stat_statements text (read by queryid when query_length is longer than query) or the full statement instead")
 	return nil
 }
 

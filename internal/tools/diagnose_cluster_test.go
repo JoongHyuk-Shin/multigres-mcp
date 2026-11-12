@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -242,6 +243,97 @@ func TestLongStatementLeavesRoomForGatewayAndLaterChecks(t *testing.T) {
 	if strings.Contains(first, "[result truncated") || !strings.Contains(first, statement[:min(piece, len(statement))]) {
 		t.Fatalf("the instruction's first piece is not the first %d characters of the statement:\n%s", piece, first)
 	}
+}
+
+func TestGatewayRowsShowTheStartOfLongStatements(t *testing.T) {
+	const shown = 500
+	const marker = "SELECT pg_sleep($1) AS long_gateway_row_"
+	testenv.Exec(t, gateway(t), "SELECT pg_stat_statements_reset()")
+	aliases := make([]string, 120)
+	for i := range aliases {
+		aliases[i] = fmt.Sprintf("%d AS column_with_a_long_name_to_fill_the_gateway_text_%03d", i, i)
+	}
+	failures := make(chan error, 11)
+	var wg sync.WaitGroup
+	for n := range 11 {
+		statement := fmt.Sprintf(`SELECT pg_sleep(2) AS long_gateway_row_%02d, 1 AS "가나다라마바사아자차카타파하", %s`, n, strings.Join(aliases, ", "))
+		conn := gateway(t)
+		wg.Go(func() {
+			for range 6 {
+				if _, err := conn.Exec(context.Background(), statement); err != nil {
+					failures <- err
+					return
+				}
+			}
+		})
+	}
+	wg.Wait()
+	close(failures)
+	for err := range failures {
+		t.Fatal(err)
+	}
+
+	h := newHarness(t, clusterConfig(config.Restricted))
+	gateways, err := h.deps.Admin.Gateways(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	type keptQuery struct {
+		text        []rune
+		fingerprint string
+	}
+	kept := map[string]keptQuery{}
+	for _, gw := range gateways {
+		answer, err := h.deps.Admin.GatewayQueries(context.Background(), gw.GetId())
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, query := range answer.GetSnapshot().GetQueries() {
+			if text := query.GetNormalizedSql(); strings.HasPrefix(text, marker) && len([]rune(text)) > shown {
+				kept[text[:len(marker)+2]] = keptQuery{text: []rune(text), fingerprint: query.GetFingerprint()}
+			}
+		}
+	}
+	if len(kept) != 11 {
+		t.Fatalf("the gateways kept %d of the 11 long statements", len(kept))
+	}
+
+	results := map[string]string{
+		"get_top_queries": h.mustCall("get_top_queries", topQueriesInput{SortBy: "total_time"}),
+		"diagnose":        h.mustCall("diagnose", diagnoseInput{}),
+	}
+	for name, text := range results {
+		if strings.Contains(text, "[result truncated") {
+			t.Fatalf("long gateway rows filled the %s result:\n%s", name, text)
+		}
+		label := strings.Index(text, "gateway query statistics, ")
+		note := strings.Index(text, fmt.Sprintf("normalized_sql is the first %d characters", shown))
+		if label < 0 || note < 0 || note > label {
+			t.Fatalf("%s does not say before the gateway rows that they show the first %d characters:\n%s", name, shown, text)
+		}
+		var rows []gatewayQuery
+		if err := json.NewDecoder(strings.NewReader(text[label+strings.Index(text[label:], "["):])).Decode(&rows); err != nil {
+			t.Fatalf("%s gateway rows: %v\n%s", name, err, text)
+		}
+		long := 0
+		for _, row := range rows {
+			if !strings.HasPrefix(row.NormalizedSQL, marker) {
+				continue
+			}
+			long++
+			full := kept[row.NormalizedSQL[:len(marker)+2]]
+			if row.NormalizedSQL != string(full.text[:shown]) {
+				t.Fatalf("%s shows %d characters of a gateway row, want the first %d of the %d the gateway kept", name, len([]rune(row.NormalizedSQL)), shown, len(full.text))
+			}
+			if row.Fingerprint != full.fingerprint {
+				t.Fatalf("%s gives fingerprint %q for a gateway row the gateway keeps as %q", name, row.Fingerprint, full.fingerprint)
+			}
+		}
+		if long == 0 {
+			t.Fatalf("no long gateway row in the %s result:\n%s", name, text)
+		}
+	}
+	mustContain(t, checkSection(t, results["diagnose"], "constraints"), "verdict: ")
 }
 
 func statementRow(t *testing.T, text, start string) map[string]any {
