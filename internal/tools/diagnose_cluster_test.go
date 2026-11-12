@@ -311,6 +311,7 @@ func TestGatewayRowsShowTheStartOfLongStatements(t *testing.T) {
 		if label < 0 || note < 0 || note > label {
 			t.Fatalf("%s does not say before the gateway rows that they show the first %d characters:\n%s", name, shown, text)
 		}
+		mustContain(t, text[note:label], "fingerprint tells apart rows that start alike", "do not pass normalized_sql to explain_query or the index advisors")
 		var rows []gatewayQuery
 		if err := json.NewDecoder(strings.NewReader(text[label+strings.Index(text[label:], "["):])).Decode(&rows); err != nil {
 			t.Fatalf("%s gateway rows: %v\n%s", name, err, text)
