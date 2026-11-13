@@ -38,9 +38,10 @@ JOIN pg_catalog.pg_class c ON c.oid = s.seqrelid
 JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
 WHERE n.nspname = $1
 ORDER BY sequence_name`
-	extensionsQuery db.Query = `SELECT extname, extversion, extrelocatable
-FROM pg_catalog.pg_extension
-ORDER BY extname`
+	extensionsQuery db.Query = `SELECT e.extname, e.extversion, e.extrelocatable, n.nspname AS extschema
+FROM pg_catalog.pg_extension e
+JOIN pg_catalog.pg_namespace n ON n.oid = e.extnamespace
+ORDER BY e.extname`
 	columnsQuery db.Query = `SELECT a.attname AS column_name, pg_catalog.format_type(a.atttypid, a.atttypmod) AS data_type,
        CASE WHEN a.attnotnull OR (t.typtype = 'd' AND t.typnotnull) THEN 'NO' ELSE 'YES' END AS is_nullable,
        CASE WHEN a.attgenerated = '' THEN pg_catalog.pg_get_expr(d.adbin, d.adrelid) END AS column_default
@@ -71,9 +72,10 @@ FROM pg_catalog.pg_sequence s
 JOIN pg_catalog.pg_class c ON c.oid = s.seqrelid
 JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
 WHERE n.nspname = $1 AND c.relname = $2`
-	extensionQuery db.Query = `SELECT extname, extversion, extrelocatable
-FROM pg_catalog.pg_extension
-WHERE extname = $1`
+	extensionQuery db.Query = `SELECT e.extname, e.extversion, e.extrelocatable, n.nspname AS extschema
+FROM pg_catalog.pg_extension e
+JOIN pg_catalog.pg_namespace n ON n.oid = e.extnamespace
+WHERE e.extname = $1`
 )
 
 const callSettings = "note: set by this server for this call only: %s. SHOW and current_setting report these values. pg_settings.setting shows them too except statement_timeout, which the Multigres gateway keeps itself: it enforces it and answers SHOW and current_setting for it, but does not set it on the node. Before this call set its own, this server's session had statement_timeout %s: the value the gateway gives a session that connects the same way and does not set it. pg_settings.reset_val shows what a new session starts with for the other settings"
@@ -89,12 +91,12 @@ type section struct {
 type noInput struct{}
 
 type objectsInput struct {
-	SchemaName string `json:"schema_name" jsonschema:"Schema name"`
+	SchemaName string `json:"schema_name" jsonschema:"Schema name (not used for extension)"`
 	ObjectType string `json:"object_type,omitempty" jsonschema:"Object type: table, view, sequence or extension (default table)"`
 }
 
 type objectInput struct {
-	SchemaName string `json:"schema_name" jsonschema:"Schema name"`
+	SchemaName string `json:"schema_name" jsonschema:"Schema name (not used for extension)"`
 	ObjectName string `json:"object_name" jsonschema:"Object name"`
 	ObjectType string `json:"object_type,omitempty" jsonschema:"Object type: table, view, sequence or extension (default table)"`
 }
@@ -117,8 +119,8 @@ type explainInput struct {
 
 func registerPostgres(server *mcp.Server, d *Deps) {
 	add(server, d, "list_schemas", "List Schemas", "List all schemas in the database. The multigres schema is internal to Multigres.", reading, d.listSchemas)
-	add(server, d, "list_objects", "List Objects", "List objects in a schema.", reading, d.listObjects)
-	add(server, d, "get_object_details", "Get Object Details", "Show columns, constraints and indexes of a table or view, or details of a sequence or extension.", reading, d.objectDetails)
+	add(server, d, "list_objects", "List Objects", "List the tables, views or sequences in one schema, or every extension in the database (schema_name is not used for extension). Rows give the schema, name and type of each table or view, the schema, name and data type of each sequence, or the name, version, relocatable flag and the schema holding the objects of each extension. Read from the system catalogs, so the role's privileges do not hide objects. Use list_schemas for schema names and get_object_details for one object.", reading, d.listObjects)
+	add(server, d, "get_object_details", "Get Object Details", "Show the columns (data type, nullability, default), constraints and indexes of a table or view, the data type, start and increment of a sequence, or the version, relocatable flag and the schema holding the objects of an extension (schema_name is not used for extension). Read from the system catalogs, so the role's privileges do not hide anything. Use list_objects to find names.", reading, d.objectDetails)
 	add(server, d, "execute_sql", "Execute Read-Only SQL", "Run one read-only SQL statement (SELECT, EXPLAIN of a SELECT, or SHOW) through the Multigres gateway. The statement is checked before it is sent and runs in a read-only transaction that is always rolled back. Functions must be on the allow list.", reading, d.executeSQL)
 	add(server, d, "explain_query", "Explain Query", "Show the execution plan of a SQL query with cost estimates. A query with $1-style placeholders (as in query statistics) is explained with a generic plan. Hypothetical indexes need the hypopg extension.", reading, d.explainQuery)
 	registerDiagnostics(server, d)
@@ -170,7 +172,11 @@ func (d *Deps) objectDetails(ctx context.Context, in objectInput, out *output) e
 	default:
 		return fmt.Errorf("unsupported object type %q; use table, view, sequence or extension", in.ObjectType)
 	}
-	out.Line("object: %s.%s (%s)", in.SchemaName, in.ObjectName, kind)
+	if kind == "extension" {
+		out.Line("object: %s (%s)", in.ObjectName, kind)
+	} else {
+		out.Line("object: %s.%s (%s)", in.SchemaName, in.ObjectName, kind)
+	}
 	nodes := d.poolerLookup(ctx)
 	report, err := d.DB.Read(ctx, d.readPlan(), func(ctx context.Context, tx *db.Tx) error {
 		for _, section := range sections {

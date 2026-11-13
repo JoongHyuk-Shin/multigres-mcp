@@ -97,6 +97,40 @@ func TestToolSetFollowsModeAndAdminURL(t *testing.T) {
 	}
 }
 
+func TestCatalogToolsSayExtensionsDoNotUseTheSchema(t *testing.T) {
+	listed, err := session(t, NewServer(&Deps{Config: testConfig(config.Restricted, "")}, "test")).ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checked := 0
+	for _, tool := range listed.Tools {
+		if tool.Name != "list_objects" && tool.Name != "get_object_details" {
+			continue
+		}
+		checked++
+		raw, err := json.Marshal(tool.InputSchema)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var schema struct {
+			Properties map[string]struct {
+				Description string `json:"description"`
+			} `json:"properties"`
+		}
+		if err := json.Unmarshal(raw, &schema); err != nil {
+			t.Fatal(err)
+		}
+		for where, text := range map[string]string{"description": tool.Description, "schema_name": schema.Properties["schema_name"].Description} {
+			if !strings.Contains(text, "not used for extension") {
+				t.Errorf("%s %s does not say that extensions do not use the schema name: %q", tool.Name, where, text)
+			}
+		}
+	}
+	if checked != 2 {
+		t.Fatalf("checked %d of the two catalog tools", checked)
+	}
+}
+
 func annotationCode(a *mcp.ToolAnnotations) string {
 	if a.OpenWorldHint == nil || *a.OpenWorldHint || a.DestructiveHint == nil {
 		return "open world or unset"

@@ -42,12 +42,12 @@ type topQueriesInput struct {
 }
 
 type workloadIndexesInput struct {
-	MaxIndexSizeMB int `json:"max_index_size_mb,omitempty" jsonschema:"Size budget for all recommended indexes together, in MB (default 10000)"`
+	MaxIndexSizeMB int `json:"max_index_size_mb,omitempty" jsonschema:"Size budget for all recommended indexes together, in MB (default 10000); a candidate that would take the total over it is not added"`
 }
 
 type queryIndexesInput struct {
 	Queries        []string `json:"queries" jsonschema:"Up to 10 SELECT queries, with values or with $1-style placeholders"`
-	MaxIndexSizeMB int      `json:"max_index_size_mb,omitempty" jsonschema:"Size budget for all recommended indexes together, in MB (default 10000)"`
+	MaxIndexSizeMB int      `json:"max_index_size_mb,omitempty" jsonschema:"Size budget for all recommended indexes together, in MB (default 10000); a candidate that would take the total over it is not added"`
 }
 
 type diagnoseInput struct {
@@ -99,8 +99,8 @@ type queryCost struct {
 
 func registerDiagnostics(server *mcp.Server, d *Deps) {
 	add(server, d, "get_top_queries", "Get Top Queries", "Report the slowest or most resource-intensive queries from pg_stat_statements and from the query statistics each Multigres gateway keeps. The two sources cover different periods and are shown separately.", reading, d.topQueries)
-	add(server, d, "analyze_workload_indexes", "Analyze Workload Indexes", "Recommend indexes for the current workload in pg_stat_statements, by comparing planner costs with hypothetical indexes (hypopg). Nothing is created.", reading, d.workloadIndexes)
-	add(server, d, "analyze_query_indexes", "Analyze Query Indexes", "Recommend indexes for up to 10 given SELECT queries, by comparing planner costs with hypothetical indexes (hypopg). Nothing is created.", reading, d.queryIndexes)
+	add(server, d, "analyze_workload_indexes", "Analyze Workload Indexes", "Recommend indexes for this database's workload: the pg_stat_statements queries with at least 50 calls and 5 ms mean time, up to 100 by total time. Candidates are indexes on 1 to 3 columns that the queries filter, join, sort or group on, each tried as a hypothetical index (hypopg) and compared by planner cost. A greedy search adds one at a time while an addition lowers the workload cost by at least 10%, is worth its size and keeps the total within max_index_size_mb; it stops after 30 seconds with what it has chosen. Nothing is created. Returns CREATE INDEX statements with estimated sizes and costs, skipped queries with reasons, and each query's cost before and after. Needs pg_stat_statements and hypopg. For queries you choose, use analyze_query_indexes.", reading, d.workloadIndexes)
+	add(server, d, "analyze_query_indexes", "Analyze Query Indexes", "Recommend indexes for up to 10 SELECT queries you give, each with weight 1, by the same search as analyze_workload_indexes: hypothetical indexes (hypopg), planner costs, the 10% rule, max_index_size_mb and the 30 second limit. Queries may hold values or $1-style placeholders, which are costed with a generic plan. Statements that are not a SELECT are skipped with the reason. Nothing is created. Needs hypopg.", reading, d.queryIndexes)
 	add(server, d, "diagnose", "Diagnose Database", "Run health checks (bloat, vacuum, locks, activity, waits, slow queries, missing indexes, cache, log, index health, sequences, replication, constraints), after the statistics period of the node that answered.", reading, d.diagnose)
 }
 

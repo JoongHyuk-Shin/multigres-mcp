@@ -80,7 +80,7 @@ Other clients take the same command, arguments and environment in their server c
 | Tool | Mode | What it does |
 |---|---|---|
 | `list_schemas` | both | List the schemas. The `multigres` schema is internal to Multigres. |
-| `list_objects` | both | List the tables, views, sequences or extensions of a schema. |
+| `list_objects` | both | List the tables, views or sequences of a schema, or every extension in the database. |
 | `get_object_details` | both | Columns, constraints and indexes of a table or view, or details of a sequence or extension. |
 | `execute_sql` | both | Run one read-only statement (`SELECT`, `EXPLAIN` of a `SELECT`, or `SHOW`). In both modes it only reads. |
 | `explain_query` | both | The plan of a query, optionally with `ANALYZE` or with hypothetical indexes. A query with `$1` placeholders, as stored in query statistics, gets a generic plan. |

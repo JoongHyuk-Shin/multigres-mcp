@@ -251,6 +251,44 @@ CREATE SEQUENCE %[1]s.ticket START 5`, schema))
 	}
 }
 
+func TestExtensionsAreListedForTheDatabaseWithTheirSchema(t *testing.T) {
+	rows, err := gateway(t).Query(context.Background(), `SELECT e.extname, e.extversion, CASE WHEN e.extrelocatable THEN 't' ELSE 'f' END, n.nspname
+FROM pg_catalog.pg_extension e JOIN pg_catalog.pg_namespace n ON n.oid = e.extnamespace
+ORDER BY e.extname`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var want []string
+	plpgsql := ""
+	for rows.Next() {
+		var name, version, relocatable, schema string
+		if err := rows.Scan(&name, &version, &relocatable, &schema); err != nil {
+			t.Fatal(err)
+		}
+		row, err := json.Marshal([]string{name, version, relocatable, schema})
+		if err != nil {
+			t.Fatal(err)
+		}
+		want = append(want, string(row))
+		if name == "plpgsql" {
+			plpgsql = string(row)
+		}
+	}
+	if err := rows.Err(); err != nil || plpgsql == "" {
+		t.Fatalf("reading pg_extension: %v, plpgsql row %q", err, plpgsql)
+	}
+	h := newHarness(t, clusterConfig(config.Restricted))
+
+	listed := h.mustCall("list_objects", objectsInput{SchemaName: "no_such_schema", ObjectType: "extension"})
+	mustContain(t, listed, append(want, `"extschema"`, fmt.Sprintf("rows: %d", len(want)))...)
+
+	details := h.mustCall("get_object_details", objectInput{SchemaName: "no_such_schema", ObjectName: "plpgsql", ObjectType: "extension"})
+	if first, _, _ := strings.Cut(details, "\n"); first != "object: plpgsql (extension)" {
+		t.Fatalf("the first line names a schema the extension is not looked up in: %q\n%s", first, details)
+	}
+	mustContain(t, details, `"extschema"`, plpgsql)
+}
+
 func resultBody(text string) string {
 	if end := strings.Index(text, "answered_by: "); end >= 0 {
 		return text[:end]
