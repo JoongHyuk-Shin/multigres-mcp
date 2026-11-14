@@ -361,6 +361,60 @@ func TestIndexAdvisorReadsDatabaseQualifiedNames(t *testing.T) {
 	mustContain(t, text, "skipped: 0", fmt.Sprintf(`CREATE INDEX ON \"%s\".\"orders\" USING btree (\"customer_id\")`, schema))
 }
 
+func TestIndexAdvisorsSayWhyNothingIsRecommended(t *testing.T) {
+	schema := testenv.Schema(t, "norec")
+	testenv.Exec(t, gateway(t), fmt.Sprintf(`CREATE TABLE %[1]s.wide (id bigint PRIMARY KEY, a int, pad text, tags json);
+INSERT INTO %[1]s.wide SELECT g, g %% 20000, repeat('x', 60), '{}' FROM generate_series(1, 100000) g;
+CREATE TABLE %[1]s.narrow (a int, b int);
+INSERT INTO %[1]s.narrow SELECT g, g %% 50 FROM generate_series(1, 20000) g;
+ANALYZE %[1]s.wide; ANALYZE %[1]s.narrow`, schema))
+	searched := func(budget, overBudget, smallGain, tooLittle int) string {
+		return fmt.Sprintf("no recommendation: none of the 1 candidate indexes was added (postgres-mcp rules); would take the indexes over max_index_size_mb (%d MB), so not costed: %d; lowers the workload cost by less than 10%%: %d; lowers it by 10%% or more but too little for its size (log(cost) + 2 x log(size) did not fall, size being the total size of the tables with candidates, their indexes included): %d", budget, overBudget, smallGain, tooLittle)
+	}
+	reasonLine := func(text string) string {
+		reason := ""
+		for _, line := range strings.Split(text, "\n") {
+			if strings.HasPrefix(line, "no recommendation:") {
+				reason = line
+			}
+		}
+		return reason
+	}
+	h := newHarness(t, clusterConfig(config.Restricted))
+	testenv.Exec(t, primary(t), "SELECT pg_stat_statements_reset()")
+	workload := h.mustCall("analyze_workload_indexes", workloadIndexesInput{})
+	if reason := reasonLine(workload); !strings.Contains(workload, "workload: 0 queries") || reason != "no recommendation: no query was analyzed" {
+		t.Fatalf("an empty workload gives the line %q:\n%.3000s", reason, workload)
+	}
+	for _, c := range []struct {
+		name     string
+		query    string
+		budgetMB int
+		want     string
+	}{
+		{"nothing analyzed", "SELECT 1", 0, "no recommendation: no query was analyzed"},
+		{"no column to index", "SELECT count(*) FROM %s.wide", 0, "no recommendation: no candidate index, because the analyzed queries filter, join, sort or group on no column of an ordinary user table"},
+		{"every possible index left out", "SELECT * FROM %s.wide WHERE id = 5 AND pad = 'x' AND tags::text = 'x'", 0, "no recommendation: no candidate index; the columns the analyzed queries filter, join, sort or group on give 7 possible indexes of 1 to 3 columns; already a btree index: 1; include a text column (text, or varchar or char longer than 100 or without a length) with no statistics or wider than 40 bytes on average: 4; cannot be built with btree (listed above): 2"},
+		{"over the size budget", "SELECT * FROM %s.wide WHERE a = 42", 1, searched(1, 1, 0, 0)},
+		{"small gain", "SELECT * FROM %s.narrow WHERE b < 45", 0, searched(10000, 0, 1, 0)},
+		{"too little for its size", "SELECT * FROM %s.narrow WHERE b < 8", 0, searched(10000, 0, 0, 1)},
+		{"zero cost", "SELECT * FROM %s.wide WHERE a = 42 AND false", 0, "no recommendation: the analyzed queries' plan cost is 0, so no index can lower it"},
+		{"recommended within the default budget", "SELECT * FROM %s.wide WHERE a = 42", 0, ""},
+	} {
+		query := c.query
+		if strings.Contains(query, "%s") {
+			query = fmt.Sprintf(query, schema)
+		}
+		text := h.mustCall("analyze_query_indexes", queryIndexesInput{Queries: []string{query}, MaxIndexSizeMB: c.budgetMB})
+		if reason := reasonLine(text); reason != c.want {
+			t.Fatalf("%s: the line on why nothing is recommended is\n%q\nwant\n%q\n%.4000s", c.name, reason, c.want, text)
+		}
+		if c.want == "" {
+			mustContain(t, text, "recommended indexes, in the order the search chose them")
+		}
+	}
+}
+
 func TestIndexAdvisorsShowTheStartOfLongQueries(t *testing.T) {
 	schema := ordersSchema(t, "longadvice")
 	setup := gateway(t)

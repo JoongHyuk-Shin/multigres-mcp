@@ -69,16 +69,17 @@ type QueryCost struct {
 }
 
 type Analysis struct {
-	Analyzed        int
-	Skipped         []Skipped
-	NoStatistics    []string
-	NotIndexable    []NotIndexable
-	Candidates      int
-	BaseCost        float64
-	FinalCost       float64
-	Recommendations []Recommendation
-	Queries         []QueryCost
-	TimedOut        bool
+	Analyzed         int
+	Skipped          []Skipped
+	NoStatistics     []string
+	NotIndexable     []NotIndexable
+	Candidates       int
+	BaseCost         float64
+	FinalCost        float64
+	Recommendations  []Recommendation
+	NoRecommendation string
+	Queries          []QueryCost
+	TimedOut         bool
 }
 
 type workloadQuery struct {
@@ -103,6 +104,15 @@ type session struct {
 	candidates []*candidate
 	costs      map[string][]float64
 	deadline   time.Time
+	indexed    int
+	longText   int
+	rejected   rejections
+}
+
+type rejections struct {
+	overBudget int
+	smallGain  int
+	tooLittle  int
 }
 
 func Recommend(ctx context.Context, tx *db.Tx, queries []Query, opts Options) (*Analysis, error) {
@@ -125,6 +135,7 @@ func Recommend(ctx context.Context, tx *db.Tx, queries []Query, opts Options) (*
 	}
 	analysis.Analyzed = len(s.queries)
 	if len(s.queries) == 0 {
+		analysis.NoRecommendation = "no query was analyzed"
 		return analysis, nil
 	}
 	if err := s.buildCandidates(ctx, tables, columns, analysis, opts.Describe); err != nil {
@@ -140,7 +151,13 @@ func Recommend(ctx context.Context, tx *db.Tx, queries []Query, opts Options) (*
 		return nil, err
 	}
 	analysis.TimedOut = timedOut
-	return analysis, s.report(ctx, analysis, before, chosen)
+	if err := s.report(ctx, analysis, before, chosen); err != nil {
+		return nil, err
+	}
+	if len(chosen) == 0 {
+		analysis.NoRecommendation = s.noRecommendation(analysis, opts.BudgetMB)
+	}
+	return analysis, nil
 }
 
 func parseWorkload(queries []Query, analysis *Analysis) []*workloadQuery {
@@ -323,10 +340,12 @@ func (s *session) buildCandidates(ctx context.Context, tables map[relation]table
 	for _, t := range order {
 		for _, combo := range combinations(used[t.oid], maxIndexWidth) {
 			if existing[indexKey(t.oid, "btree", combo)] {
+				s.indexed++
 				continue
 			}
 			long, drop := longText(columns[t.oid], combo)
 			if drop {
+				s.longText++
 				continue
 			}
 			s.candidates = append(s.candidates, &candidate{table: t, columns: combo, definition: definition(t, combo), longText: long})
@@ -470,6 +489,7 @@ func (s *session) greedy(ctx context.Context, base int64, budgetMB int) ([]int, 
 			}
 			space := currentSpace + s.candidates[i].size
 			if budget > 0 && space-base > budget {
+				s.rejected.overBudget++
 				continue
 			}
 			cost, err := s.average(ctx, append(append([]int(nil), chosen...), i))
@@ -478,9 +498,14 @@ func (s *session) greedy(ctx context.Context, base int64, budgetMB int) ([]int, 
 			}
 			improvement := (currentTime - cost) / currentTime
 			if improvement < minTimeImprovement {
+				s.rejected.smallGain++
 				continue
 			}
 			value := objective(cost, space)
+			if value >= currentObjective {
+				s.rejected.tooLittle++
+				continue
+			}
 			if value < bestObjective && improvement > bestImprovement {
 				best, bestTime, bestSpace, bestObjective, bestImprovement = i, cost, space, value, improvement
 			}
@@ -586,6 +611,29 @@ func (s *session) report(ctx context.Context, analysis *Analysis, before []float
 		analysis.Queries = append(analysis.Queries, QueryCost{Query: query.Query, Before: before[i], After: final[i]})
 	}
 	return s.tx.ResetHypothetical(ctx)
+}
+
+func (s *session) noRecommendation(analysis *Analysis, budgetMB int) string {
+	switch {
+	case analysis.Candidates == 0:
+		return s.noCandidate(len(analysis.NotIndexable))
+	case analysis.BaseCost <= 0:
+		return "the analyzed queries' plan cost is 0, so no index can lower it"
+	case analysis.TimedOut:
+		return fmt.Sprintf("the search stopped at its %s limit before it chose an index", SearchLimit)
+	}
+	gain := minTimeImprovement * 100
+	return fmt.Sprintf("none of the %d candidate indexes was added (postgres-mcp rules); would take the indexes over max_index_size_mb (%d MB), so not costed: %d; lowers the workload cost by less than %.0f%%: %d; lowers it by %.0f%% or more but too little for its size (log(cost) + %g x log(size) did not fall, size being the total size of the tables with candidates, their indexes included): %d",
+		analysis.Candidates, budgetMB, s.rejected.overBudget, gain, s.rejected.smallGain, gain, paretoAlpha, s.rejected.tooLittle)
+}
+
+func (s *session) noCandidate(notIndexable int) string {
+	possible := s.indexed + s.longText + notIndexable
+	if possible == 0 {
+		return "no candidate index, because the analyzed queries filter, join, sort or group on no column of an ordinary user table"
+	}
+	return fmt.Sprintf("no candidate index; the columns the analyzed queries filter, join, sort or group on give %d possible indexes of 1 to %d columns; already a btree index: %d; include a text column (text, or varchar or char longer than %d or without a length) with no statistics or wider than %.0f bytes on average: %d; cannot be built with btree (listed above): %d",
+		possible, maxIndexWidth, s.indexed, maxTextLength, longTextWidth, s.longText, notIndexable)
 }
 
 func configKey(config []int) string {

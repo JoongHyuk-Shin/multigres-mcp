@@ -376,12 +376,12 @@ func writeRecommendations(out *output, analysis *advisor.Analysis) {
 	if len(analysis.NotIndexable) > 0 {
 		out.JSON("candidate indexes left out because Postgres cannot build them with btree", analysis.NotIndexable)
 	}
-	if analysis.TimedOut {
-		out.Line("the search stopped at its %s limit; the recommendations below are the ones chosen before that", advisor.SearchLimit)
-	}
 	if len(analysis.Recommendations) == 0 {
-		out.Line("no recommendation: no single index lowers the workload cost by more than 10%% (postgres-mcp threshold)")
+		out.Line("no recommendation: %s", analysis.NoRecommendation)
 	} else {
+		if analysis.TimedOut {
+			out.Line("the search stopped at its %s limit; the recommendations below are the ones chosen before that", advisor.SearchLimit)
+		}
 		recommendations := make([]recommendation, len(analysis.Recommendations))
 		for i, r := range analysis.Recommendations {
 			recommendations[i] = recommendation{Definition: r.Definition, Table: r.Table, Columns: r.Columns, SizeBytes: r.SizeBytes, CostBefore: r.CostBefore, CostAfter: r.CostAfter, CostAlone: r.CostAlone}
