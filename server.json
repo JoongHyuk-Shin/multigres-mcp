@@ -3,7 +3,7 @@
   "name": "io.github.JoongHyuk-Shin/multigres-mcp",
   "title": "Multigres",
   "description": "Postgres diagnostics and cluster operations for Multigres clusters.",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "repository": {
     "url": "https://github.com/JoongHyuk-Shin/multigres-mcp",
     "source": "github"
@@ -11,8 +11,8 @@
   "packages": [
     {
       "registryType": "mcpb",
-      "identifier": "https://github.com/JoongHyuk-Shin/multigres-mcp/releases/download/v0.1.11/multigres-mcp-0.1.11.mcpb",
-      "fileSha256": "907aabd2d0965b807796e8e6f76777f666ccd502499105df51236a30f19c9da2",
+      "identifier": "https://github.com/JoongHyuk-Shin/multigres-mcp/releases/download/v0.1.12/multigres-mcp-0.1.12.mcpb",
+      "fileSha256": "3d24563a6b9fbe914510d13cd0f61d06d78a6bc6128c04a84efa2688d93aea5f",
       "transport": {
         "type": "stdio"
       },
