@@ -380,12 +380,26 @@ ANALYZE %[1]s.wide; ANALYZE %[1]s.narrow`, schema))
 		}
 		return reason
 	}
+	onlyNotesAfter := func(name, text, analysis string) {
+		t.Helper()
+		at := strings.Index(text, "queries analyzed: ")
+		if at < 0 || !strings.HasPrefix(text[at:], analysis) {
+			t.Fatalf("%s: want the analysis part\n%s\n%.4000s", name, analysis, text)
+		}
+		for _, line := range strings.Split(strings.TrimSuffix(text[at+len(analysis):], "\n"), "\n") {
+			if line != "" && !strings.HasPrefix(line, "note: ") {
+				t.Fatalf("%s: no query was analyzed, but the result goes on after the reason with %q:\n%.4000s", name, line, text)
+			}
+		}
+	}
 	h := newHarness(t, clusterConfig(config.Restricted))
 	testenv.Exec(t, primary(t), "SELECT pg_stat_statements_reset()")
 	workload := h.mustCall("analyze_workload_indexes", workloadIndexesInput{})
 	if reason := reasonLine(workload); !strings.Contains(workload, "workload: 0 queries") || reason != "no recommendation: no query was analyzed" {
 		t.Fatalf("an empty workload gives the line %q:\n%.3000s", reason, workload)
 	}
+	onlyNotesAfter("empty workload", workload, "queries analyzed: 0, skipped: 0, candidate indexes: 0\nno recommendation: no query was analyzed\n")
+	results := map[string]string{}
 	for _, c := range []struct {
 		name     string
 		query    string
@@ -412,6 +426,13 @@ ANALYZE %[1]s.wide; ANALYZE %[1]s.narrow`, schema))
 		if c.want == "" {
 			mustContain(t, text, "recommended indexes, in the order the search chose them")
 		}
+		results[c.name] = text
+	}
+	onlyNotesAfter("SELECT 1", results["nothing analyzed"], "queries analyzed: 0, skipped: 1, candidate indexes: 0\nskipped queries:\n[\n  {\n    \"query\": \"SELECT 1\",\n    \"query_length\": 8,\n    \"reason\": \"reads no ordinary user table\"\n  }\n]\nno recommendation: no query was analyzed\n")
+	zero := results["zero cost"]
+	mustContain(t, zero, "workload cost (average over queries of plan total cost x weight): 0.00 before, 0.00 after\n")
+	if row := listedRow(t, zero, "plan total cost per query, before and after all recommended indexes", "SELECT * FROM "+schema+".wide WHERE a = 42 AND false"); fmt.Sprintf("%v %v", row["cost_before"], row["cost_after"]) != "0 0" {
+		t.Fatalf("a query whose plan cost is 0 is listed with costs %v and %v, want 0 and 0", row["cost_before"], row["cost_after"])
 	}
 }
 

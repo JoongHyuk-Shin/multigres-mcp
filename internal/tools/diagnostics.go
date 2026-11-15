@@ -391,6 +391,9 @@ func writeRecommendations(out *output, analysis *advisor.Analysis) {
 		}
 		out.JSON("recommended indexes, in the order the search chose them (sizes are hypopg estimates, close to a btree without deduplication; on a column with many repeated values the real btree can be several times smaller)", recommendations)
 	}
+	if analysis.Analyzed == 0 {
+		return
+	}
 	out.Line("workload cost (average over queries of plan total cost x weight): %.2f before, %.2f after", analysis.BaseCost, analysis.FinalCost)
 	costs := make([]queryCost, len(analysis.Queries))
 	for i, q := range analysis.Queries {
