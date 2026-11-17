@@ -62,6 +62,11 @@ func TestBuiltinNamesMustNotBeShadowed(t *testing.T) {
 		t.Fatalf("a name that only the rewritten generic plan text has was not checked:\n%s", text)
 	}
 	mustContain(t, text, "was not sent", "public.btrim", "without calling btrim")
+	text, isError = h.call("execute_sql", sqlInput{SQL: "SELECT abs('x'), TRIM(BOTH 'x' FROM 'y')"})
+	if !isError {
+		t.Fatalf("a statement calling two shadowed names was sent:\n%s", text)
+	}
+	mustContain(t, text, "public.abs, public.btrim", "write abs with the pg_catalog. prefix", "without calling btrim")
 }
 
 func TestGatewayRewriteMustNotReachShadowingFunctions(t *testing.T) {

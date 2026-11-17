@@ -125,6 +125,7 @@ func TestCheckedReportsNamesTheRewriteLeavesUnqualified(t *testing.T) {
 		"SELECT TRIM(both ' ' from a), b AT TIME ZONE 'UTC', pg_catalog.ltrim(c), pg_catalog.abs(d), lower(e) FROM t": "btrim,lower,ltrim,timezone",
 		"EXPLAIN (ANALYZE) SELECT (a, b) OVERLAPS (c, d), COLLATION FOR (e) FROM t":                                   "overlaps,pg_collation_for",
 		"SELECT EXTRACT(year FROM a), SUBSTRING(b FROM 1 FOR 2), pg_catalog.upper(c) FROM t":                          "",
+		`SELECT "substring"(a, 1, 2) FROM t`:                                                                          "substring",
 	}
 	for sql, want := range cases {
 		checked, err := CheckRead(sql)

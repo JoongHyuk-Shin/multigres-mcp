@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/JoongHyuk-Shin/multigres-mcp/internal/sqlguard"
 	"github.com/JoongHyuk-Shin/multigres-mcp/internal/testenv"
 )
 
@@ -91,6 +92,24 @@ func TestReadOnlyStartupOptionSurvivesBatchRollback(t *testing.T) {
 	tables := testenv.Count(t, setup, "SELECT count(*) FROM pg_tables WHERE schemaname = $1", schema)
 	if tables != 1 {
 		t.Fatalf("expected only the kept table to remain, found %d tables", tables)
+	}
+}
+
+func TestGenericPlanSenderChecksTheNamesInItsOwnText(t *testing.T) {
+	setup := testenv.Connect(t, testenv.GatewayURL())
+	t.Cleanup(func() { setup.Close(context.Background()) })
+	testenv.Exec(t, setup, "CREATE FUNCTION public.btrim(text, text) RETURNS text LANGUAGE sql AS $$ SELECT 'shadow' $$")
+	t.Cleanup(func() { testenv.Exec(t, setup, "DROP FUNCTION public.btrim(text, text)") })
+	checked, err := sqlguard.CheckRead("SELECT TRIM(BOTH 'x' FROM CAST($1 AS text))")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = gatewayDB(t).Read(context.Background(), Plan{Timeout: 5 * time.Second}, func(ctx context.Context, tx *Tx) error {
+		_, err := tx.ExplainGeneric(ctx, checked, false)
+		return err
+	})
+	if err == nil || !strings.Contains(err.Error(), "public.btrim") {
+		t.Fatalf("the generic plan was sent without checking the names in the text it sends: %v", err)
 	}
 }
 
