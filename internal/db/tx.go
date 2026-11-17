@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -196,21 +197,40 @@ func (t *Tx) CheckShadowing(ctx context.Context, checked *sqlguard.Checked) erro
 		return err
 	}
 	defer rows.Close()
-	var found []string
+	var found, prefixed, avoided []string
 	for rows.Next() {
 		var name, schema string
 		if err := rows.Scan(&name, &schema); err != nil {
 			return err
 		}
 		found = append(found, schema+"."+name)
+		if slices.Contains(prefixed, name) || slices.Contains(avoided, name) {
+			continue
+		}
+		if sqlguard.KeepsCatalogPrefix(name) {
+			prefixed = append(prefixed, name)
+		} else {
+			avoided = append(avoided, name)
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return err
 	}
-	if len(found) > 0 {
-		return fmt.Errorf("the statement was not sent: functions with the same name exist outside pg_catalog (%s); write the built-in function with the pg_catalog. prefix", strings.Join(found, ", "))
+	if len(found) == 0 {
+		return nil
 	}
-	return nil
+	return shadowedError(found, prefixed, avoided)
+}
+
+func shadowedError(found, prefixed, avoided []string) error {
+	var steps []string
+	if len(prefixed) > 0 {
+		steps = append(steps, fmt.Sprintf("write %s with the pg_catalog. prefix", strings.Join(prefixed, ", ")))
+	}
+	if len(avoided) > 0 {
+		steps = append(steps, fmt.Sprintf("write the statement without calling %s, by name or through SQL syntax such as TRIM (btrim) or AT TIME ZONE (timezone): the Multigres gateway can send these calls without the pg_catalog. prefix", strings.Join(avoided, ", ")))
+	}
+	return fmt.Errorf("the statement was not sent: functions with the same name exist outside pg_catalog (%s); %s", strings.Join(found, ", "), strings.Join(steps, "; "))
 }
 
 func (t *Tx) ResetHypothetical(ctx context.Context) error {

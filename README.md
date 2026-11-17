@@ -107,11 +107,11 @@ The restricted mode does not register any tool that can write. Writing SQL is a 
 
 Every statement that `execute_sql`, `explain_query` and `analyze_query_indexes` receive passes these checks. They do not rely on each other: checks 1, 3 and 4 each stop a write on their own.
 
-1. It is parsed with the Multigres parser. It must be exactly one statement, the top statement must be `SELECT`, `EXPLAIN` of a `SELECT`, or `SHOW`, and the tree must not contain data-changing statements, `SELECT INTO` or locking clauses. Functions must be on an allow list (the postgres-mcp list with functions that have side effects removed), and a schema-qualified function must be in `pg_catalog`.
+1. It is parsed with the Multigres parser. It must be exactly one statement, the top statement must be `SELECT`, `EXPLAIN` of a `SELECT`, or `SHOW`, and the tree must not contain data-changing statements, `SELECT INTO` or locking clauses. Functions must be on an allow list (the postgres-mcp list with functions that have side effects removed), and a schema-qualified function must be in `pg_catalog`. The Multigres gateway can send the statement rewritten from its parse tree instead of the text it received, so the rewritten statement must pass this check as well.
 2. It is sent with the extended query protocol, which carries one statement only.
 3. The read-only connection is opened with `default_transaction_read_only=on`.
 4. It runs in `BEGIN TRANSACTION READ ONLY`, which is always rolled back.
-5. `search_path` is pinned, and a statement that calls an unqualified function whose name also exists outside `pg_catalog` is not sent.
+5. `search_path` is pinned, and a statement is not sent if it or its rewritten form calls an unqualified function whose name also exists outside `pg_catalog`. The rewritten form calls some built-ins without the prefix even when it was written, such as `btrim` for `TRIM(...)` or `pg_catalog.btrim(...)`.
 6. A statement timeout is set.
 
 This covers the statements the model sends and the functions they call directly. The bodies of objects already in the database (views, functions, operators, policies) are trusted and not checked. Against a production database, connect as a read-only role as well. `cluster_status` shows whether the connected user is a superuser.

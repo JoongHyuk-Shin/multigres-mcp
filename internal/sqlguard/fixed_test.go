@@ -75,13 +75,23 @@ func TestFixedQueriesQualifyEveryFunction(t *testing.T) {
 			continue
 		}
 		for _, statement := range statements {
-			pgast.Rewrite(statement, func(cursor *pgast.Cursor) bool {
-				call, ok := cursor.Node().(*pgast.FuncCall)
-				if ok && call.Funcname != nil && len(call.Funcname.Items) < 2 {
-					t.Errorf("%s (%s) calls %s without a schema, so a same-named function earlier in the search path can run instead", query.name, query.file, call.Funcname.SqlString())
+			rewritten, err := pgparser.ParseSQL(statement.SqlString())
+			if err != nil {
+				t.Errorf("%s (%s) does not parse as the Multigres gateway can rewrite it: %v", query.name, query.file, err)
+				continue
+			}
+			forms := map[string][]pgast.Stmt{"as written": {statement}, "as the Multigres gateway can rewrite it": rewritten}
+			for form, trees := range forms {
+				for _, tree := range trees {
+					pgast.Rewrite(tree, func(cursor *pgast.Cursor) bool {
+						call, ok := cursor.Node().(*pgast.FuncCall)
+						if ok && call.Funcname != nil && len(call.Funcname.Items) < 2 {
+							t.Errorf("%s (%s) calls %s without a schema %s, so a same-named function earlier in the search path can run instead", query.name, query.file, call.Funcname.SqlString(), form)
+						}
+						return true
+					}, nil)
 				}
-				return true
-			}, nil)
+			}
 		}
 	}
 }

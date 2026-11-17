@@ -111,10 +111,28 @@ func TestCheckReadRejects(t *testing.T) {
 		"SELECT CASE WHEN true THEN pg_terminate_backend(1) END",
 		"SELECT * FROM t WHERE a IN (VALUES (pg_terminate_backend(1)))",
 		"SELECT lower(pg_terminate_backend(1)::text)",
+		"SELECT pg_catalog.position('a', 'b')",
 	}
 	for _, sql := range rejected {
 		if _, err := CheckRead(sql); err == nil {
 			t.Errorf("accepted %q", sql)
+		}
+	}
+}
+
+func TestCheckedReportsNamesTheRewriteLeavesUnqualified(t *testing.T) {
+	cases := map[string]string{
+		"SELECT TRIM(both ' ' from a), b AT TIME ZONE 'UTC', pg_catalog.ltrim(c), pg_catalog.abs(d), lower(e) FROM t": "btrim,lower,ltrim,timezone",
+		"EXPLAIN (ANALYZE) SELECT (a, b) OVERLAPS (c, d), COLLATION FOR (e) FROM t":                                   "overlaps,pg_collation_for",
+		"SELECT EXTRACT(year FROM a), SUBSTRING(b FROM 1 FOR 2), pg_catalog.upper(c) FROM t":                          "",
+	}
+	for sql, want := range cases {
+		checked, err := CheckRead(sql)
+		if err != nil {
+			t.Fatalf("%q: %v", sql, err)
+		}
+		if got := strings.Join(checked.UnqualifiedFunctions(), ","); got != want {
+			t.Errorf("%q: unqualified functions %q, want %q", sql, got, want)
 		}
 	}
 }

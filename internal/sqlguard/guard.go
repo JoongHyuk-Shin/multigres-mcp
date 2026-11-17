@@ -48,13 +48,16 @@ func CheckRead(sql string) (*Checked, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := checkReadTop(tree); err != nil {
+	walk := readWalk{unqualified: map[string]bool{}}
+	if err := walk.check(tree); err != nil {
 		return nil, err
 	}
-	walk := readWalk{unqualified: map[string]bool{}}
-	ast.Rewrite(tree, walk.visit, nil)
-	if walk.err != nil {
-		return nil, walk.err
+	rewritten, err := parseOne(tree.SqlString())
+	if err == nil {
+		err = walk.check(rewritten)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("the Multigres gateway can send this statement rewritten, and the rewritten statement fails the check: %w", err)
 	}
 	return &Checked{text: sql, tree: tree, unqualified: sortedKeys(walk.unqualified), placeholders: walk.maxParam}, nil
 }
@@ -96,6 +99,26 @@ func CheckWrite(sql string) (*CheckedWrite, error) {
 		return nil, walk.err
 	}
 	return &CheckedWrite{text: sql}, nil
+}
+
+func KeepsCatalogPrefix(name string) bool {
+	probe, err := parseOne(`SELECT pg_catalog."` + strings.ReplaceAll(name, `"`, `""`) + `"()`)
+	if err != nil {
+		return false
+	}
+	rewritten, err := parseOne(probe.SqlString())
+	if err != nil {
+		return false
+	}
+	kept := false
+	ast.Rewrite(rewritten, func(cursor *ast.Cursor) bool {
+		if call, ok := cursor.Node().(*ast.FuncCall); ok {
+			schema, _, err := functionName(call)
+			kept = err == nil && schema == "pg_catalog"
+		}
+		return true
+	}, nil)
+	return kept
 }
 
 func verifyOneReadStatement(text string) (*Checked, error) {
@@ -154,6 +177,14 @@ type readWalk struct {
 	unqualified map[string]bool
 	maxParam    int
 	err         error
+}
+
+func (w *readWalk) check(tree ast.Stmt) error {
+	if err := checkReadTop(tree); err != nil {
+		return err
+	}
+	ast.Rewrite(tree, w.visit, nil)
+	return w.err
 }
 
 func (w *readWalk) visit(cursor *ast.Cursor) bool {

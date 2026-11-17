@@ -50,7 +50,7 @@ func TestBuiltinNamesMustNotBeShadowed(t *testing.T) {
 	if !isError || strings.Contains(text, "shadow\"") {
 		t.Fatalf("an unqualified name that a public function shadows was sent:\n%s", text)
 	}
-	mustContain(t, text, "was not sent", "public.abs", "pg_catalog. prefix")
+	mustContain(t, text, "was not sent", "public.abs", "write abs with the pg_catalog. prefix")
 	mustContain(t, h.mustCall("execute_sql", sqlInput{SQL: "SELECT pg_catalog.abs(-3)"}), `["3"]`)
 
 	trimmed := explainInput{SQL: "SELECT TRIM(BOTH 'x' FROM CAST($1 AS text))"}
@@ -61,7 +61,48 @@ func TestBuiltinNamesMustNotBeShadowed(t *testing.T) {
 	if !isError {
 		t.Fatalf("a name that only the rewritten generic plan text has was not checked:\n%s", text)
 	}
-	mustContain(t, text, "was not sent", "public.btrim", "pg_catalog. prefix")
+	mustContain(t, text, "was not sent", "public.btrim", "without calling btrim")
+}
+
+func TestGatewayRewriteMustNotReachShadowingFunctions(t *testing.T) {
+	schema := ordersSchema(t, "rewrite")
+	setup := gateway(t)
+	h := newHarness(t, clusterConfig(config.Restricted))
+	rest := fmt.Sprintf(" AS t, current_setting('statement_timeout') AS s FROM %s.orders WHERE customer_id = 5", schema)
+	queries := []string{"SELECT trim(CAST(status AS varchar))" + rest, "SELECT pg_catalog.btrim(CAST(status AS varchar))" + rest}
+	tools := []struct {
+		name, ran string
+		call      func(sql string) (string, bool)
+	}{
+		{"execute_sql", `["done","`, func(sql string) (string, bool) { return h.call("execute_sql", sqlInput{SQL: sql}) }},
+		{"explain_query", "actual time", func(sql string) (string, bool) {
+			return h.call("explain_query", explainInput{SQL: sql, Analyze: true})
+		}},
+		{"analyze_query_indexes", `(\"customer_id\")`, func(sql string) (string, bool) {
+			return h.call("analyze_query_indexes", queryIndexesInput{Queries: []string{sql}})
+		}},
+	}
+	for _, tool := range tools {
+		for _, sql := range queries {
+			text, isError := tool.call(sql)
+			if isError {
+				t.Fatalf("%s failed on %q before any shadowing function exists:\n%s", tool.name, sql, text)
+			}
+			mustContain(t, text, tool.ran)
+		}
+	}
+	testenv.Exec(t, setup, "CREATE FUNCTION public.btrim(varchar) RETURNS text LANGUAGE sql AS $$ SELECT 'shadow' $$")
+	t.Cleanup(func() { testenv.Exec(t, setup, "DROP FUNCTION public.btrim(varchar)") })
+	for _, tool := range tools {
+		for _, sql := range queries {
+			text, _ := tool.call(sql)
+			if strings.Contains(text, `shadow"`) || strings.Contains(text, tool.ran) {
+				t.Errorf("%s sent %q although the gateway's rewrite of it calls public.btrim:\n%.600s", tool.name, sql, text)
+				continue
+			}
+			mustContain(t, text, "was not sent", "public.btrim", "without calling btrim")
+		}
+	}
 }
 
 func TestToolsReleaseAdvisoryLocksTakenInsideViews(t *testing.T) {
