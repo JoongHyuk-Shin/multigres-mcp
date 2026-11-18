@@ -36,6 +36,7 @@ var wordsThatParse = map[string]string{
 	"Cluster Status": "tools/cluster.go",
 	"vacuum":         "diag/diag.go",
 	"analyze":        "sqlguard/guard.go",
+	"SELECT ":        "sqlguard/guard.go",
 }
 
 type fixedQuery struct {
@@ -85,7 +86,7 @@ func TestFixedQueriesQualifyEveryFunction(t *testing.T) {
 				for _, tree := range trees {
 					pgast.Rewrite(tree, func(cursor *pgast.Cursor) bool {
 						call, ok := cursor.Node().(*pgast.FuncCall)
-						if ok && call.Funcname != nil && len(call.Funcname.Items) < 2 {
+						if ok && sqlguard.IsResolvedThroughSearchPath(call) {
 							t.Errorf("%s (%s) calls %s without a schema %s, so a same-named function earlier in the search path can run instead", query.name, query.file, call.Funcname.SqlString(), form)
 						}
 						return true

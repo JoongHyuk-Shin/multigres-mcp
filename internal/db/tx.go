@@ -207,7 +207,7 @@ func (t *Tx) CheckShadowing(ctx context.Context, checked *sqlguard.Checked) erro
 		if slices.Contains(prefixed, name) || slices.Contains(avoided, name) {
 			continue
 		}
-		if sqlguard.KeepsCatalogPrefix(name) {
+		if checked.IsFixedByPrefix(name) {
 			prefixed = append(prefixed, name)
 		} else {
 			avoided = append(avoided, name)
@@ -228,7 +228,7 @@ func shadowedError(found, prefixed, avoided []string) error {
 		steps = append(steps, fmt.Sprintf("write %s with the pg_catalog. prefix", strings.Join(prefixed, ", ")))
 	}
 	if len(avoided) > 0 {
-		steps = append(steps, fmt.Sprintf("write the statement without calling %s, by name or through SQL syntax such as TRIM (btrim) or AT TIME ZONE (timezone): the Multigres gateway can send these calls without the pg_catalog. prefix", strings.Join(avoided, ", ")))
+		steps = append(steps, fmt.Sprintf("write the statement without calling %s, by name or through SQL syntax that the Multigres gateway rewrites into a call without the pg_catalog. prefix, such as TRIM (btrim) or AT TIME ZONE (timezone): adding the prefix does not help, because the gateway can send these calls without it", strings.Join(avoided, ", ")))
 	}
 	return fmt.Errorf("the statement was not sent: functions with the same name exist outside pg_catalog (%s); %s", strings.Join(found, ", "), strings.Join(steps, "; "))
 }

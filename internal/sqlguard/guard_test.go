@@ -125,7 +125,8 @@ func TestCheckedReportsNamesTheRewriteLeavesUnqualified(t *testing.T) {
 		"SELECT TRIM(both ' ' from a), b AT TIME ZONE 'UTC', pg_catalog.ltrim(c), pg_catalog.abs(d), lower(e) FROM t": "btrim,lower,ltrim,timezone",
 		"EXPLAIN (ANALYZE) SELECT (a, b) OVERLAPS (c, d), COLLATION FOR (e) FROM t":                                   "overlaps,pg_collation_for",
 		"SELECT EXTRACT(year FROM a), SUBSTRING(b FROM 1 FOR 2), pg_catalog.upper(c) FROM t":                          "",
-		`SELECT "substring"(a, 1, 2) FROM t`:                                                                          "substring",
+		`SELECT "extract"('year', a) FROM t`:                                                                          "extract",
+		"SELECT overlay(a, 'x', 1), SUBSTRING(b, 1, 2) FROM t":                                                        "overlay,substring",
 	}
 	for sql, want := range cases {
 		checked, err := CheckRead(sql)
@@ -134,6 +135,27 @@ func TestCheckedReportsNamesTheRewriteLeavesUnqualified(t *testing.T) {
 		}
 		if got := strings.Join(checked.UnqualifiedFunctions(), ","); got != want {
 			t.Errorf("%q: unqualified functions %q, want %q", sql, got, want)
+		}
+	}
+}
+
+func TestPrefixAdviceComesFromTheStatement(t *testing.T) {
+	cases := []struct {
+		sql, name string
+		fixed     bool
+	}{
+		{"SELECT abs(a) FROM t", "abs", true},
+		{`SELECT "extract"('year', a) FROM t`, "extract", true},
+		{"SELECT btrim(a) FROM t", "btrim", false},
+		{"SELECT SUBSTRING(a, 1, 2) FROM t", "substring", false},
+	}
+	for _, c := range cases {
+		checked, err := CheckRead(c.sql)
+		if err != nil {
+			t.Fatalf("%q: %v", c.sql, err)
+		}
+		if got := checked.IsFixedByPrefix(c.name); got != c.fixed {
+			t.Errorf("%q: writing %s with the pg_catalog. prefix makes it pass: %v, want %v", c.sql, c.name, got, c.fixed)
 		}
 	}
 }

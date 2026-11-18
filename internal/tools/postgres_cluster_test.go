@@ -110,6 +110,35 @@ func TestGatewayRewriteMustNotReachShadowingFunctions(t *testing.T) {
 	}
 }
 
+func TestPlainOverlayAndSubstringCallsMustNotReachShadowingFunctions(t *testing.T) {
+	schema := ordersSchema(t, "plaincall")
+	setup := gateway(t)
+	h := newHarness(t, clusterConfig(config.Restricted))
+	from := fmt.Sprintf(" AS t FROM %s.orders WHERE customer_id = 5", schema)
+	queries := map[string]string{
+		"overlay":   "SELECT overlay(CAST(status AS varchar), CAST('X' AS varchar), 1)" + from,
+		"substring": "SELECT substring(CAST(status AS varchar), 1, 2)" + from,
+	}
+	for _, sql := range queries {
+		if text, isError := h.call("execute_sql", sqlInput{SQL: sql}); isError {
+			t.Fatalf("execute_sql failed on %q before any shadowing function exists:\n%s", sql, text)
+		}
+	}
+	testenv.Exec(t, setup, `CREATE FUNCTION public.overlay(varchar, varchar, integer) RETURNS text LANGUAGE sql AS $$ SELECT 'shadow' $$;
+CREATE FUNCTION public.substring(varchar, integer, integer) RETURNS text LANGUAGE sql AS $$ SELECT 'shadow' $$`)
+	t.Cleanup(func() {
+		testenv.Exec(t, setup, "DROP FUNCTION public.overlay(varchar, varchar, integer); DROP FUNCTION public.substring(varchar, integer, integer)")
+	})
+	for name, sql := range queries {
+		text, _ := h.call("execute_sql", sqlInput{SQL: sql})
+		if strings.Contains(text, `shadow"`) || !strings.Contains(text, "was not sent") {
+			t.Errorf("execute_sql did not refuse %q although PostgreSQL resolves it to public.%s:\n%.600s", sql, name, text)
+			continue
+		}
+		mustContain(t, text, "public."+name, "without calling "+name)
+	}
+}
+
 func TestToolsReleaseAdvisoryLocksTakenInsideViews(t *testing.T) {
 	schema := testenv.Schema(t, "toollocks")
 	base := 700300

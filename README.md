@@ -111,7 +111,7 @@ Every statement that `execute_sql`, `explain_query` and `analyze_query_indexes` 
 2. It is sent with the extended query protocol, which carries one statement only.
 3. The read-only connection is opened with `default_transaction_read_only=on`.
 4. It runs in `BEGIN TRANSACTION READ ONLY`, which is always rolled back.
-5. `search_path` is pinned, and a statement is not sent if it or its rewritten form calls an unqualified function whose name also exists outside `pg_catalog`. The rewritten form calls some built-ins without the prefix even when it was written, such as `btrim` for `TRIM(...)` or `pg_catalog.btrim(...)`.
+5. `search_path` is pinned, and a statement is not sent if it or its rewritten form calls a function that PostgreSQL resolves through `search_path` and whose name also exists outside `pg_catalog`. The rewritten form calls some built-ins without the prefix, such as `btrim` for `TRIM(...)` and even for a written `pg_catalog.btrim(...)`. PostgreSQL also resolves the plain call forms `overlay(a, b, c)` and `substring(a, b, c)` through `search_path`, though the Multigres parser reads them as `pg_catalog` calls.
 6. A statement timeout is set.
 
 This covers the statements the model sends and the functions they call directly. The bodies of objects already in the database (views, functions, operators, policies) are trusted and not checked. Against a production database, connect as a read-only role as well. `cluster_status` shows whether the connected user is a superuser.
