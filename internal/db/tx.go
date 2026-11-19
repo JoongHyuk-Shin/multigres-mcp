@@ -187,39 +187,46 @@ func (t *Tx) HypotheticalIndexSize(ctx context.Context, oid uint32) (int64, erro
 	return size, err
 }
 
+var ErrNotSent = errors.New("the statement was not sent")
+
 func (t *Tx) CheckShadowing(ctx context.Context, checked *sqlguard.Checked) error {
 	names := checked.UnqualifiedFunctions()
 	if len(names) == 0 {
 		return nil
 	}
-	rows, err := t.conn.Query(ctx, string(shadowQuery), names)
+	shadows, err := t.shadowingFunctions(ctx, names)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: could not check for functions with the same name outside pg_catalog: %w", ErrNotSent, err)
 	}
-	defer rows.Close()
-	var found, prefixed, avoided []string
-	for rows.Next() {
-		var name, schema string
-		if err := rows.Scan(&name, &schema); err != nil {
-			return err
-		}
-		found = append(found, schema+"."+name)
-		if slices.Contains(prefixed, name) || slices.Contains(avoided, name) {
-			continue
-		}
-		if checked.IsFixedByPrefix(name) {
-			prefixed = append(prefixed, name)
-		} else {
-			avoided = append(avoided, name)
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return err
-	}
-	if len(found) == 0 {
+	if len(shadows) == 0 {
 		return nil
 	}
+	var found, prefixed, avoided []string
+	for _, shadow := range shadows {
+		found = append(found, shadow.Schema+"."+shadow.Name)
+		if slices.Contains(prefixed, shadow.Name) || slices.Contains(avoided, shadow.Name) {
+			continue
+		}
+		if checked.IsFixedByPrefix(shadow.Name) {
+			prefixed = append(prefixed, shadow.Name)
+		} else {
+			avoided = append(avoided, shadow.Name)
+		}
+	}
 	return shadowedError(found, prefixed, avoided)
+}
+
+type shadowingFunction struct {
+	Name   string
+	Schema string
+}
+
+func (t *Tx) shadowingFunctions(ctx context.Context, names []string) ([]shadowingFunction, error) {
+	rows, err := t.conn.Query(ctx, string(shadowQuery), names)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[shadowingFunction])
 }
 
 func shadowedError(found, prefixed, avoided []string) error {
@@ -230,7 +237,7 @@ func shadowedError(found, prefixed, avoided []string) error {
 	if len(avoided) > 0 {
 		steps = append(steps, fmt.Sprintf("write the statement without calling %s, by name or through SQL syntax that the Multigres gateway rewrites into a call without the pg_catalog. prefix, such as TRIM (btrim) or AT TIME ZONE (timezone): adding the prefix does not help, because the gateway can send these calls without it", strings.Join(avoided, ", ")))
 	}
-	return fmt.Errorf("the statement was not sent: functions with the same name exist outside pg_catalog (%s); %s", strings.Join(found, ", "), strings.Join(steps, "; "))
+	return fmt.Errorf("%w: functions with the same name exist outside pg_catalog (%s); %s", ErrNotSent, strings.Join(found, ", "), strings.Join(steps, "; "))
 }
 
 func (t *Tx) ResetHypothetical(ctx context.Context) error {

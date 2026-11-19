@@ -285,7 +285,11 @@ func (s *session) baseline(ctx context.Context, queries []*workloadQuery, analys
 			return nil, ctx.Err()
 		}
 		if err != nil {
-			analysis.Skipped = append(analysis.Skipped, Skipped{Query: query.Query, Reason: "EXPLAIN failed: " + describe(err)})
+			reason := "EXPLAIN failed: " + describe(err)
+			if errors.Is(err, db.ErrNotSent) {
+				reason = describe(err)
+			}
+			analysis.Skipped = append(analysis.Skipped, Skipped{Query: query.Query, Reason: reason})
 			continue
 		}
 		s.queries = append(s.queries, query)

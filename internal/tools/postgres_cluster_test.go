@@ -108,6 +108,34 @@ func TestGatewayRewriteMustNotReachShadowingFunctions(t *testing.T) {
 			mustContain(t, text, "was not sent", "public.btrim", "without calling btrim")
 		}
 	}
+	advice, _ := h.call("analyze_query_indexes", queryIndexesInput{Queries: queries})
+	refusal := "the statement was not sent: functions with the same name exist outside pg_catalog (public.btrim); "
+	for _, sql := range queries {
+		if reason := fmt.Sprint(listedRow(t, advice, "skipped queries", sql[:20])["reason"]); !strings.HasPrefix(reason, refusal) {
+			t.Errorf("analyze_query_indexes gives the refusal of %q as %.300q, want it to start with %q", sql, reason, refusal)
+		}
+	}
+}
+
+func TestAFailedNameLookupSaysTheStatementWasNotSent(t *testing.T) {
+	setup := gateway(t)
+	role, password := unique("mcp_noproc_"), unique("Pw-")
+	testenv.Exec(t, setup, fmt.Sprintf("CREATE ROLE %s LOGIN PASSWORD '%s'", role, password))
+	t.Cleanup(func() { testenv.Exec(t, gateway(t), "DROP ROLE "+role) })
+	schema := ordersSchema(t, "lookup")
+	testenv.Exec(t, setup, fmt.Sprintf("GRANT USAGE ON SCHEMA %[1]s TO %[2]s; GRANT SELECT ON %[1]s.orders TO %[2]s", schema, role))
+	testenv.Exec(t, setup, "REVOKE SELECT ON pg_catalog.pg_proc FROM PUBLIC")
+	t.Cleanup(func() { testenv.Exec(t, gateway(t), "GRANT SELECT ON pg_catalog.pg_proc TO PUBLIC") })
+	cfg := clusterConfig(config.Restricted)
+	cfg.DatabaseURL = gatewayURLAs(role, password, 15432)
+	h := newHarness(t, cfg)
+
+	sql := "SELECT abs(customer_id) FROM " + schema + ".orders WHERE customer_id = 5"
+	advice := h.mustCall("analyze_query_indexes", queryIndexesInput{Queries: []string{sql}})
+	want := "the statement was not sent: could not check for functions with the same name outside pg_catalog: permission denied for table pg_proc (SQLSTATE 42501)"
+	if reason := listedRow(t, advice, "skipped queries", sql[:20])["reason"]; reason != want {
+		t.Fatalf("analyze_query_indexes gives a failed name lookup as %.300q, want %q", reason, want)
+	}
 }
 
 func TestPlainOverlayAndSubstringCallsMustNotReachShadowingFunctions(t *testing.T) {
