@@ -183,11 +183,37 @@ func vacuum(ctx context.Context, tx *db.Tx, sink Sink, _ Callbacks) error {
 	} else {
 		sink.Line("verdict: healthy (no table under the postgres-mcp threshold of 10,000,000 transactions left)")
 	}
+	if err := aggressiveVacuums(ctx, tx, sink); err != nil {
+		return err
+	}
 	if _, err := show(ctx, tx, sink, "autovacuum and autoanalyze, oldest first", autovacuumQuery); err != nil {
 		return err
 	}
 	_, err = show(ctx, tx, sink, "vacuums in progress", vacuumProgressQuery)
 	return err
+}
+
+func aggressiveVacuums(ctx context.Context, tx *db.Tx, sink Sink) error {
+	var tableAge, maxAge, multiTableAge, multiMaxAge, databaseAge, databaseMultiAge int64
+	err := tx.QueryRow(ctx, freezeSettingsQuery).Scan(&tableAge, &maxAge, &multiTableAge, &multiMaxAge, &databaseAge, &databaseMultiAge)
+	if err != nil {
+		return err
+	}
+	sink.Line("aggressive autovacuum (it reads every page that is not all-frozen yet): Postgres makes the next autovacuum of a relation aggressive when age(relfrozenxid) >= min(the relation's autovacuum_freeze_table_age, else vacuum_freeze_table_age %d; 0.95 x autovacuum_freeze_max_age %d) or mxid_age(relminmxid) >= min(the relation's autovacuum_multixact_freeze_table_age, else vacuum_multixact_freeze_table_age %d; 0.95 x autovacuum_multixact_freeze_max_age %d, which Postgres lowers when multixact member space runs short, out of sight of SQL); a TOAST table with no storage parameters of its own takes its table's",
+		tableAge, maxAge, multiTableAge, multiMaxAge)
+	sink.Line("this database: age(datfrozenxid) %d, mxid_age(datminmxid) %d (the oldest of all its relations, system catalogs included)", databaseAge, databaseMultiAge)
+	rows, err := rowsOf(ctx, tx, aggressiveListQuery)
+	if err != nil {
+		return err
+	}
+	var aggressive int64
+	for _, row := range rows {
+		aggressive, _ = row["aggressive_total"].(int64)
+		delete(row, "aggressive_total")
+	}
+	sink.Line("relations whose next autovacuum is aggressive: %d (tables, materialized views and their TOAST tables; system catalogs left out)", aggressive)
+	sink.JSON("up to 10 relations: aggressive ones first, then those with the fewest transactions left before their next autovacuum is aggressive", rows)
+	return nil
 }
 
 func locks(ctx context.Context, tx *db.Tx, sink Sink, _ Callbacks) error {

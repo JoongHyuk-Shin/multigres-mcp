@@ -39,6 +39,48 @@ JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
 LEFT JOIN pg_catalog.pg_class t ON c.reltoastrelid = t.oid
 WHERE c.relkind = 'r' AND (2146483648 - greatest(pg_catalog.age(c.relfrozenxid), pg_catalog.age(t.relfrozenxid))) < 10000000
 ORDER BY 3, 1, 2`
+	freezeSettingsQuery db.Query = `SELECT pg_catalog.current_setting('vacuum_freeze_table_age')::bigint,
+       pg_catalog.current_setting('autovacuum_freeze_max_age')::bigint,
+       pg_catalog.current_setting('vacuum_multixact_freeze_table_age')::bigint,
+       pg_catalog.current_setting('autovacuum_multixact_freeze_max_age')::bigint,
+       pg_catalog.age(d.datfrozenxid)::bigint, pg_catalog.mxid_age(d.datminmxid)::bigint
+FROM pg_catalog.pg_database d
+WHERE d.datname = pg_catalog.current_database()`
+	aggressiveListQuery db.Query = `WITH owners AS (
+  SELECT c.oid, n.nspname, c.relname, c.reltoastrelid, c.reloptions
+  FROM pg_catalog.pg_class c
+  JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+  WHERE c.relkind IN ('r', 'm') AND c.relpersistence <> 't' AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+), parts AS (
+  SELECT o.nspname, o.relname, NULL::text AS toast, o.oid, o.reloptions AS options
+  FROM owners o
+  UNION ALL
+  SELECT o.nspname, o.relname, t.oid::pg_catalog.regclass::text, t.oid, coalesce(t.reloptions, o.reloptions)
+  FROM owners o
+  JOIN pg_catalog.pg_class t ON t.oid = o.reltoastrelid
+), limits AS (
+  SELECT p.nspname, p.relname, p.toast, p.oid,
+         pg_catalog.age(c.relfrozenxid)::bigint AS xid_age,
+         pg_catalog.mxid_age(c.relminmxid)::bigint AS mxid_age,
+         least(coalesce((SELECT o.option_value FROM pg_catalog.pg_options_to_table(p.options) o WHERE o.option_name = 'autovacuum_freeze_table_age')::bigint,
+                        pg_catalog.current_setting('vacuum_freeze_table_age')::bigint),
+               pg_catalog.trunc(pg_catalog.current_setting('autovacuum_freeze_max_age')::float8 * 0.95::float8)::bigint) AS xid_aggressive_at,
+         least(coalesce((SELECT o.option_value FROM pg_catalog.pg_options_to_table(p.options) o WHERE o.option_name = 'autovacuum_multixact_freeze_table_age')::bigint,
+                        pg_catalog.current_setting('vacuum_multixact_freeze_table_age')::bigint),
+               pg_catalog.trunc(pg_catalog.current_setting('autovacuum_multixact_freeze_max_age')::float8 * 0.95::float8)::bigint) AS mxid_aggressive_at
+  FROM parts p
+  JOIN pg_catalog.pg_class c ON c.oid = p.oid
+), ranked AS (
+  SELECT nspname AS schema, relname AS "table", toast, oid, xid_age, xid_aggressive_at,
+         xid_aggressive_at - xid_age AS transactions_left, mxid_age, mxid_aggressive_at,
+         xid_age >= xid_aggressive_at OR mxid_age >= mxid_aggressive_at AS aggressive
+  FROM limits
+)
+SELECT schema, "table", toast, xid_age, xid_aggressive_at, transactions_left, mxid_age, mxid_aggressive_at,
+       pg_catalog.pg_relation_size(oid) AS size_bytes, aggressive AS next_autovacuum_aggressive, aggressive_total
+FROM (SELECT *, pg_catalog.count(*) FILTER (WHERE aggressive) OVER () AS aggressive_total
+      FROM ranked ORDER BY aggressive DESC, transactions_left, schema, "table", toast NULLS FIRST LIMIT 10) closest
+ORDER BY next_autovacuum_aggressive DESC, transactions_left, schema, "table", toast NULLS FIRST`
 	autovacuumQuery db.Query = `SELECT schemaname, relname, last_autovacuum, last_autoanalyze, autovacuum_count, autoanalyze_count, n_dead_tup
 FROM pg_catalog.pg_stat_user_tables
 ORDER BY last_autovacuum NULLS FIRST, relname
