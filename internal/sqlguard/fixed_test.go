@@ -27,6 +27,7 @@ var allowedFailures = map[string]struct{ file, functions string }{
 	"hypopgCreateTemplate": {"db/tx.go", "hypopg_create_index"},
 	"hypopgSizeTemplate":   {"db/tx.go", "hypopg_relation_size"},
 	"freeSpaceTemplate":    {"diag/queries.go", "pgstattuple_approx"},
+	"wraparoundQuery":      {"diag/queries.go", "mxid_age"},
 	"freezeSettingsQuery":  {"diag/queries.go", "mxid_age"},
 	"aggressiveListQuery":  {"diag/queries.go", "mxid_age"},
 	"advisoryUnlockQuery":  {"db/tx.go", "pg_advisory_unlock_all"},

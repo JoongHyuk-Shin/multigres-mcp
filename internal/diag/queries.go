@@ -32,13 +32,16 @@ JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
 CROSS JOIN LATERAL %[1]s.pgstattuple_approx(c.oid::regclass) s
 ORDER BY s.table_len DESC`
 
-	wraparoundQuery db.Query = `SELECT n.nspname AS schema, c.relname AS table,
-       2146483648 - greatest(pg_catalog.age(c.relfrozenxid), pg_catalog.age(t.relfrozenxid)) AS transactions_left
-FROM pg_catalog.pg_class c
-JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-LEFT JOIN pg_catalog.pg_class t ON c.reltoastrelid = t.oid
-WHERE c.relkind = 'r' AND (2146483648 - greatest(pg_catalog.age(c.relfrozenxid), pg_catalog.age(t.relfrozenxid))) < 10000000
-ORDER BY 3, 1, 2`
+	wraparoundQuery db.Query = `SELECT schema, "table", transactions_left, multixacts_left
+FROM (SELECT n.nspname AS schema, c.relname AS "table",
+             2146483648 - greatest(pg_catalog.age(c.relfrozenxid), pg_catalog.age(t.relfrozenxid)) AS transactions_left,
+             2146483648 - greatest(pg_catalog.mxid_age(c.relminmxid), pg_catalog.mxid_age(t.relminmxid)) AS multixacts_left
+      FROM pg_catalog.pg_class c
+      JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+      LEFT JOIN pg_catalog.pg_class t ON c.reltoastrelid = t.oid
+      WHERE c.relkind IN ('r', 'm')) ages
+WHERE transactions_left < 10000000 OR multixacts_left < 10000000
+ORDER BY least(transactions_left, multixacts_left), schema, "table"`
 	freezeSettingsQuery db.Query = `SELECT pg_catalog.current_setting('vacuum_freeze_table_age')::bigint,
        pg_catalog.current_setting('autovacuum_freeze_max_age')::bigint,
        pg_catalog.current_setting('vacuum_multixact_freeze_table_age')::bigint,

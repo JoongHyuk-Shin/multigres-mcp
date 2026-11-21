@@ -174,14 +174,14 @@ func bloat(ctx context.Context, tx *db.Tx, sink Sink, _ Callbacks) error {
 }
 
 func vacuum(ctx context.Context, tx *db.Tx, sink Sink, _ Callbacks) error {
-	danger, err := show(ctx, tx, sink, "tables under 10,000,000 transactions before wraparound", wraparoundQuery)
+	danger, err := show(ctx, tx, sink, "tables and materialized views under 10,000,000 transactions or multixacts left before wraparound (system catalogs and temporary tables included, a TOAST table counted with its table)", wraparoundQuery)
 	if err != nil {
 		return err
 	}
 	if len(danger) > 0 {
-		sink.Line("verdict: danger (postgres-mcp threshold: fewer than 10,000,000 transactions left)")
+		sink.Line("verdict: danger (postgres-mcp threshold: fewer than 10,000,000 transactions left, which this check applies to multixacts too)")
 	} else {
-		sink.Line("verdict: healthy (no table under the postgres-mcp threshold of 10,000,000 transactions left)")
+		sink.Line("verdict: healthy (no table or materialized view in this database under the postgres-mcp threshold of 10,000,000 transactions left, which this check applies to multixacts too)")
 	}
 	if err := aggressiveVacuums(ctx, tx, sink); err != nil {
 		return err

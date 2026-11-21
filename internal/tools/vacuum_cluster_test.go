@@ -18,7 +18,12 @@ import (
 	"github.com/JoongHyuk-Shin/multigres-mcp/internal/testenv"
 )
 
-const aggressiveListLabel = "up to 10 relations: aggressive ones first, then those with the fewest transactions left before their next autovacuum is aggressive:\n"
+const (
+	aggressiveListLabel = "up to 10 relations: aggressive ones first, then those with the fewest transactions left before their next autovacuum is aggressive:\n"
+	wraparoundListLabel = "tables and materialized views under 10,000,000 transactions or multixacts left before wraparound (system catalogs and temporary tables included, a TOAST table counted with its table):\n"
+	wraparoundHealthy   = "verdict: healthy (no table or materialized view in this database under the postgres-mcp threshold of 10,000,000 transactions left, which this check applies to multixacts too)"
+	wraparoundDanger    = "verdict: danger (postgres-mcp threshold: fewer than 10,000,000 transactions left, which this check applies to multixacts too)"
+)
 
 var (
 	aggressiveCount = regexp.MustCompile(`relations whose next autovacuum is aggressive: (\d+) \(`)
@@ -41,6 +46,22 @@ type aggressiveRow struct {
 type expectedAggressive struct {
 	xidAt  int64
 	mxidAt int64
+}
+
+type wraparoundRow struct {
+	Schema           string `json:"schema"`
+	Table            string `json:"table"`
+	TransactionsLeft int64  `json:"transactions_left"`
+	MultixactsLeft   int64  `json:"multixacts_left"`
+}
+
+type agedRelation struct {
+	schema    string
+	table     string
+	relation  string
+	toast     bool
+	multixact bool
+	left      int64
 }
 
 func TestVacuumShowsRelationsWhoseNextAutovacuumIsAggressive(t *testing.T) {
@@ -149,6 +170,56 @@ CREATE TABLE %[1]s.h_more (id int, body text) WITH (autovacuum_freeze_table_age 
 	}
 }
 
+func TestWraparoundVerdictCountsMaterializedViewsMultixactsAndTOAST(t *testing.T) {
+	setup := gateway(t)
+	schema := testenv.Schema(t, "wrap")
+	h := newHarness(t, clusterConfig(config.Restricted))
+	section := checkSection(t, h.mustCall("diagnose", diagnoseInput{Checks: []string{"vacuum"}}), "vacuum")
+	mustContain(t, section, wraparoundHealthy)
+	if rows := wraparoundRows(t, section); len(rows) != 0 {
+		t.Fatalf("relations under the threshold before any was aged: %+v\n%s", rows, section)
+	}
+
+	testenv.Exec(t, setup, fmt.Sprintf(`CREATE MATERIALIZED VIEW %[1]s.m_view AS SELECT 1 AS id;
+CREATE TABLE %[1]s.p_parent (id int) PARTITION BY RANGE (id);
+CREATE VIEW %[1]s.v_view AS SELECT 1 AS id`, schema))
+	temporary := primary(t)
+	testenv.Exec(t, temporary, "CREATE TEMP TABLE wrap_mxid (id int); CREATE TEMP TABLE wrap_toast_xid (id int, body text); CREATE TEMP TABLE wrap_toast_mxid (id int, body text)")
+	var temporarySchema, catalogFrozenXID string
+	if err := temporary.QueryRow(context.Background(), "SELECT nspname FROM pg_namespace WHERE oid = pg_my_temp_schema()").Scan(&temporarySchema); err != nil {
+		t.Fatal(err)
+	}
+	if err := temporary.QueryRow(context.Background(), "SELECT relfrozenxid::text FROM pg_class WHERE oid = 'information_schema.sql_features'::regclass").Scan(&catalogFrozenXID); err != nil {
+		t.Fatal(err)
+	}
+	autovacuumBlocker := primary(t)
+	testenv.Exec(t, autovacuumBlocker, "BEGIN")
+	testenv.Exec(t, autovacuumBlocker, fmt.Sprintf("ANALYZE %s.m_view, information_schema.sql_features", schema))
+	t.Cleanup(func() {
+		testenv.Exec(t, temporary, "UPDATE pg_class SET relfrozenxid = $1::text::xid WHERE oid = 'information_schema.sql_features'::regclass", catalogFrozenXID)
+	})
+
+	matview := agedRelation{schema: schema, table: "m_view", relation: schema + ".m_view", left: 1_000_000}
+	tableMultixact := agedRelation{schema: temporarySchema, table: "wrap_mxid", relation: "wrap_mxid", multixact: true, left: 2_000_000}
+	toastTransaction := agedRelation{schema: temporarySchema, table: "wrap_toast_xid", relation: "wrap_toast_xid", toast: true, left: 3_000_000}
+	toastMultixact := agedRelation{schema: temporarySchema, table: "wrap_toast_mxid", relation: "wrap_toast_mxid", toast: true, multixact: true, left: 4_000_000}
+	catalog := agedRelation{schema: "information_schema", table: "sql_features", relation: "information_schema.sql_features", left: 5_000_000}
+
+	for _, aged := range []agedRelation{matview, tableMultixact, toastMultixact} {
+		ageRelation(t, temporary, aged)
+	}
+	section = checkSection(t, h.mustCall("diagnose", diagnoseInput{Checks: []string{"vacuum"}}), "vacuum")
+	mustContain(t, section, wraparoundDanger)
+	checkWraparoundRows(t, wraparoundRows(t, section), []agedRelation{matview, tableMultixact, toastMultixact}, section)
+
+	for _, aged := range []agedRelation{toastTransaction, catalog} {
+		ageRelation(t, temporary, aged)
+	}
+	section = checkSection(t, h.mustCall("diagnose", diagnoseInput{Checks: []string{"vacuum"}}), "vacuum")
+	mustContain(t, section, wraparoundDanger)
+	checkWraparoundRows(t, wraparoundRows(t, section), []agedRelation{matview, tableMultixact, toastTransaction, toastMultixact, catalog}, section)
+}
+
 func requireDefaultFreezeSettings(t *testing.T, conn *pgx.Conn) {
 	t.Helper()
 	defaults := map[string]string{
@@ -227,6 +298,55 @@ func checkDatabaseAges(t *testing.T, section string, oldestXID, oldestMXID int64
 	mxidAge, _ := strconv.ParseInt(match[2], 10, 64)
 	if xidAge < oldestXID || mxidAge < oldestMXID {
 		t.Fatalf("database ages %d and %d are younger than the oldest relation before the call, system catalogs included (%d and %d):\n%s", xidAge, mxidAge, oldestXID, oldestMXID, section)
+	}
+}
+
+func wraparoundRows(t *testing.T, section string) []wraparoundRow {
+	t.Helper()
+	start := strings.Index(section, wraparoundListLabel)
+	if start < 0 {
+		t.Fatalf("no list of relations close to wraparound:\n%s", section)
+	}
+	decoder := json.NewDecoder(strings.NewReader(section[start+len(wraparoundListLabel):]))
+	decoder.DisallowUnknownFields()
+	var rows []wraparoundRow
+	if err := decoder.Decode(&rows); err != nil {
+		t.Fatalf("list of relations close to wraparound: %v\n%s", err, section)
+	}
+	return rows
+}
+
+func ageRelation(t *testing.T, conn *pgx.Conn, aged agedRelation) {
+	t.Helper()
+	column, ageFunction := "relfrozenxid", "age"
+	if aged.multixact {
+		column, ageFunction = "relminmxid", "mxid_age"
+	}
+	target := "$1::regclass"
+	if aged.toast {
+		target = "(SELECT reltoastrelid FROM pg_class WHERE oid = $1::regclass)"
+	}
+	update := fmt.Sprintf("UPDATE pg_class SET %[1]s = (((%[1]s::text::bigint + %[2]s(%[1]s) - $2) %% 4294967296 + 4294967296) %% 4294967296)::text::xid WHERE oid = %[3]s", column, ageFunction, target)
+	testenv.Exec(t, conn, update, aged.relation, 2146483648-aged.left)
+}
+
+func checkWraparoundRows(t *testing.T, rows []wraparoundRow, want []agedRelation, section string) {
+	t.Helper()
+	if len(rows) != len(want) {
+		t.Fatalf("listed %d relations, want %d (%+v):\n%s", len(rows), len(want), want, section)
+	}
+	for i, row := range rows {
+		expected := want[i]
+		if row.Schema != expected.schema || row.Table != expected.table {
+			t.Fatalf("row %d is %s.%s, want %s.%s (fewest transactions or multixacts left first):\n%s", i, row.Schema, row.Table, expected.schema, expected.table, section)
+		}
+		aged, other := row.TransactionsLeft, row.MultixactsLeft
+		if expected.multixact {
+			aged, other = other, aged
+		}
+		if aged > expected.left || aged < expected.left-1000 || other < 10_000_000 {
+			t.Fatalf("%s.%s: transactions_left %d and multixacts_left %d, want %d on the aged counter and the other far from the threshold:\n%s", row.Schema, row.Table, row.TransactionsLeft, row.MultixactsLeft, expected.left, section)
+		}
 	}
 }
 
