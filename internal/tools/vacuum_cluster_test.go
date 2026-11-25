@@ -36,7 +36,7 @@ type aggressiveRow struct {
 	Toast            *string `json:"toast"`
 	XIDAge           int64   `json:"xid_age"`
 	XIDAggressiveAt  int64   `json:"xid_aggressive_at"`
-	TransactionsLeft int64   `json:"transactions_left"`
+	UntilAggressive  int64   `json:"transactions_until_aggressive"`
 	MXIDAge          int64   `json:"mxid_age"`
 	MXIDAggressiveAt int64   `json:"mxid_aggressive_at"`
 	SizeBytes        int64   `json:"size_bytes"`
@@ -265,8 +265,8 @@ func aggressiveRows(t *testing.T, section string) []aggressiveRow {
 		if row.Schema == "pg_catalog" || row.Schema == "information_schema" || strings.HasPrefix(row.Schema, "pg_temp") {
 			t.Fatalf("listed a system catalog or a temporary table: %+v", row)
 		}
-		if row.TransactionsLeft != row.XIDAggressiveAt-row.XIDAge {
-			t.Fatalf("transactions_left is not xid_aggressive_at - xid_age: %+v", row)
+		if row.UntilAggressive != row.XIDAggressiveAt-row.XIDAge {
+			t.Fatalf("transactions_until_aggressive is not xid_aggressive_at - xid_age: %+v", row)
 		}
 		if row.Aggressive != (row.XIDAge >= row.XIDAggressiveAt || row.MXIDAge >= row.MXIDAggressiveAt) {
 			t.Fatalf("next_autovacuum_aggressive does not follow the two ages: %+v", row)
@@ -282,7 +282,7 @@ func checkAggressiveOrder(t *testing.T, rows []aggressiveRow, section string) {
 		if row.Aggressive && !previous.Aggressive {
 			t.Fatalf("an aggressive relation comes after one that is not:\n%s", section)
 		}
-		if row.Aggressive == previous.Aggressive && row.TransactionsLeft < previous.TransactionsLeft {
+		if row.Aggressive == previous.Aggressive && row.UntilAggressive < previous.UntilAggressive {
 			t.Fatalf("not ordered by transactions left:\n%s", section)
 		}
 	}

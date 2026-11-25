@@ -75,15 +75,15 @@ WHERE d.datname = pg_catalog.current_database()`
   JOIN pg_catalog.pg_class c ON c.oid = p.oid
 ), ranked AS (
   SELECT nspname AS schema, relname AS "table", toast, oid, xid_age, xid_aggressive_at,
-         xid_aggressive_at - xid_age AS transactions_left, mxid_age, mxid_aggressive_at,
+         xid_aggressive_at - xid_age AS transactions_until_aggressive, mxid_age, mxid_aggressive_at,
          xid_age >= xid_aggressive_at OR mxid_age >= mxid_aggressive_at AS aggressive
   FROM limits
 )
-SELECT schema, "table", toast, xid_age, xid_aggressive_at, transactions_left, mxid_age, mxid_aggressive_at,
+SELECT schema, "table", toast, xid_age, xid_aggressive_at, transactions_until_aggressive, mxid_age, mxid_aggressive_at,
        pg_catalog.pg_relation_size(oid) AS size_bytes, aggressive AS next_autovacuum_aggressive, aggressive_total
 FROM (SELECT *, pg_catalog.count(*) FILTER (WHERE aggressive) OVER () AS aggressive_total
-      FROM ranked ORDER BY aggressive DESC, transactions_left, schema, "table", toast NULLS FIRST LIMIT 10) closest
-ORDER BY next_autovacuum_aggressive DESC, transactions_left, schema, "table", toast NULLS FIRST`
+      FROM ranked ORDER BY aggressive DESC, transactions_until_aggressive, schema, "table", toast NULLS FIRST LIMIT 10) closest
+ORDER BY next_autovacuum_aggressive DESC, transactions_until_aggressive, schema, "table", toast NULLS FIRST`
 	autovacuumQuery db.Query = `SELECT schemaname, relname, last_autovacuum, last_autoanalyze, autovacuum_count, autoanalyze_count, n_dead_tup
 FROM pg_catalog.pg_stat_user_tables
 ORDER BY last_autovacuum NULLS FIRST, relname
