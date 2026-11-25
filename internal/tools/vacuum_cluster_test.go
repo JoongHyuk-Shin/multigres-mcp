@@ -20,13 +20,13 @@ import (
 
 const (
 	aggressiveListLabel = "up to 10 relations: aggressive ones first, then those with the fewest transactions left before their next autovacuum is aggressive:\n"
-	wraparoundListLabel = "tables and materialized views under 10,000,000 transactions or multixacts left before wraparound (system catalogs and temporary tables included, a TOAST table counted with its table):\n"
+	wraparoundListLabel = "tables and materialized views under 10,000,000 transactions or multixacts left, both counted as postgres-mcp counts transactions, 2,146,483,648 minus the age, which is about 2,000,000 when Postgres stops assigning new IDs (system catalogs and temporary tables included, a TOAST table counted with its table):\n"
 	wraparoundHealthy   = "verdict: healthy (no table or materialized view in this database under the postgres-mcp threshold of 10,000,000 transactions left, which this check applies to multixacts too)"
 	wraparoundDanger    = "verdict: danger (postgres-mcp threshold: fewer than 10,000,000 transactions left, which this check applies to multixacts too)"
 )
 
 var (
-	aggressiveCount = regexp.MustCompile(`relations whose next autovacuum is aggressive: (\d+) \(`)
+	aggressiveCount = regexp.MustCompile(`relations whose next autovacuum is aggressive: (\d+) \(tables, materialized views and their TOAST tables; system catalogs, information_schema tables and temporary tables left out\)`)
 	databaseAges    = regexp.MustCompile(`this database: age\(datfrozenxid\) (\d+), mxid_age\(datminmxid\) (\d+) \(`)
 )
 

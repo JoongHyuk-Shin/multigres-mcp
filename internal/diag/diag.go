@@ -174,7 +174,7 @@ func bloat(ctx context.Context, tx *db.Tx, sink Sink, _ Callbacks) error {
 }
 
 func vacuum(ctx context.Context, tx *db.Tx, sink Sink, _ Callbacks) error {
-	danger, err := show(ctx, tx, sink, "tables and materialized views under 10,000,000 transactions or multixacts left before wraparound (system catalogs and temporary tables included, a TOAST table counted with its table)", wraparoundQuery)
+	danger, err := show(ctx, tx, sink, "tables and materialized views under 10,000,000 transactions or multixacts left, both counted as postgres-mcp counts transactions, 2,146,483,648 minus the age, which is about 2,000,000 when Postgres stops assigning new IDs (system catalogs and temporary tables included, a TOAST table counted with its table)", wraparoundQuery)
 	if err != nil {
 		return err
 	}
@@ -211,7 +211,7 @@ func aggressiveVacuums(ctx context.Context, tx *db.Tx, sink Sink) error {
 		aggressive, _ = row["aggressive_total"].(int64)
 		delete(row, "aggressive_total")
 	}
-	sink.Line("relations whose next autovacuum is aggressive: %d (tables, materialized views and their TOAST tables; system catalogs left out)", aggressive)
+	sink.Line("relations whose next autovacuum is aggressive: %d (tables, materialized views and their TOAST tables; system catalogs, information_schema tables and temporary tables left out)", aggressive)
 	sink.JSON("up to 10 relations: aggressive ones first, then those with the fewest transactions left before their next autovacuum is aggressive", rows)
 	return nil
 }
