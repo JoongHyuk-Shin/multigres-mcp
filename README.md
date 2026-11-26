@@ -1,5 +1,7 @@
 # multigres-mcp
 
+[![JoongHyuk-Shin/multigres-mcp MCP server](https://glama.ai/mcp/servers/JoongHyuk-Shin/multigres-mcp/badges/score.svg)](https://glama.ai/mcp/servers/JoongHyuk-Shin/multigres-mcp)
+
 An MCP server for [Multigres](https://github.com/multigres/multigres) clusters. It gives an MCP client two groups of tools:
 
 - Postgres diagnostics through the Multigres gateway: schemas and objects, read-only SQL, query plans with hypothetical indexes, top queries, index advice and a health check. These follow the tools of [postgres-mcp](https://github.com/crystaldba/postgres-mcp).
