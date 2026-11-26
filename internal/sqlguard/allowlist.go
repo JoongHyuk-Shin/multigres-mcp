@@ -102,6 +102,8 @@ var allowedFunctions = map[string]bool{
 	"format_type":                        true,
 	"gcd":                                true,
 	"gen_random_uuid":                    true,
+	"generate_series":                    true,
+	"generate_subscripts":                true,
 	"get_current_ts_config":              true,
 	"has_any_column_privilege":           true,
 	"has_column_privilege":               true,

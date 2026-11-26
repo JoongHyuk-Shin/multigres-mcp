@@ -172,6 +172,17 @@ gcd	bigint, bigint	"int8gcd"	i
 gcd	integer, integer	"int4gcd"	i
 gcd	numeric, numeric	"numeric_gcd"	i
 gen_random_uuid		"gen_random_uuid"	v
+generate_series	bigint, bigint	"generate_series_int8"	i
+generate_series	bigint, bigint, bigint	"generate_series_step_int8"	i
+generate_series	integer, integer	"generate_series_int4"	i
+generate_series	integer, integer, integer	"generate_series_step_int4"	i
+generate_series	numeric, numeric	"generate_series_numeric"	i
+generate_series	numeric, numeric, numeric	"generate_series_step_numeric"	i
+generate_series	timestamp without time zone, timestamp without time zone, interval	"generate_series_timestamp"	i
+generate_series	timestamp with time zone, timestamp with time zone, interval	"generate_series_timestamptz"	s
+generate_series	timestamp with time zone, timestamp with time zone, interval, text	"generate_series_timestamptz_at_zone"	i
+generate_subscripts	anyarray, integer	"generate_subscripts_nodir"	i
+generate_subscripts	anyarray, integer, boolean	"generate_subscripts"	i
 get_current_ts_config		"get_current_ts_config"	s
 has_any_column_privilege	name, oid, text	"has_any_column_privilege_name_id"	s
 has_any_column_privilege	name, text, text	"has_any_column_privilege_name_name"	s
