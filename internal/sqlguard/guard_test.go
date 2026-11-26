@@ -133,6 +133,7 @@ func TestCheckedReportsNamesTheRewriteLeavesUnqualified(t *testing.T) {
 		"SELECT EXTRACT(year FROM a), SUBSTRING(b FROM 1 FOR 2), pg_catalog.upper(c) FROM t":                          "",
 		`SELECT "extract"('year', a) FROM t`:                                                                          "extract",
 		"SELECT overlay(a, 'x', 1), SUBSTRING(b, 1, 2) FROM t":                                                        "overlay,substring",
+		"SELECT g, generate_subscripts(ARRAY[1, 2], 1) FROM generate_series(1, 3) AS g":                               "generate_series,generate_subscripts",
 	}
 	for sql, want := range cases {
 		checked, err := CheckRead(sql)
@@ -328,6 +329,9 @@ func TestCheckWrite(t *testing.T) {
 		"SELECT setseed(0.5)",
 		"INSERT INTO t SELECT 1 FROM pg_catalog.setseed(0.5)",
 		"INSERT INTO t SELECT a FROM JSON_TABLE('{}'::jsonb, '$' COLUMNS (a text PATH '$.a' DEFAULT set_config('work_mem', '64MB', false) ON EMPTY))",
+		"INSERT INTO t SELECT a FROM XMLTABLE('/a' PASSING '<a/>' COLUMNS a text PATH 'a' DEFAULT set_config('work_mem', '64MB', false))",
+		"INSERT INTO t SELECT a FROM t TABLESAMPLE SYSTEM (1) REPEATABLE (set_config('work_mem', '64MB', false)::int)",
+		"INSERT INTO t SELECT 1 FROM ROWS FROM (unnest(ARRAY[1]), set_config('work_mem', '64MB', false)) WITH ORDINALITY AS x",
 		"SELECT pg_create_physical_replication_slot('s', false, true)",
 		"SELECT pg_create_logical_replication_slot('s', 'pgoutput', true)",
 		"SELECT pg_catalog.pg_create_logical_replication_slot('s', 'pgoutput', temporary => true)",
