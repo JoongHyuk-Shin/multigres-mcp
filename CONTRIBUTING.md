@@ -22,7 +22,7 @@ A change that lets restricted mode accept more statements or functions (`interna
 
 ## Security issues
 
-Report a vulnerability privately through the repository's Security tab ("Report a vulnerability") instead of opening a public issue.
+See [SECURITY.md](SECURITY.md).
 
 ## License
 
